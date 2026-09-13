@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { UserIcon } from '@heroicons/react/24/outline';
+import { Link } from 'react-router';
+import Input from '../Input/Input';
 
 const LoginDropdown = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -48,39 +50,25 @@ const LoginDropdown = () => {
       {isOpen && (
         <div
           role="menu"
-          className="absolute left-0 mt-3 w-72 rounded-lg border border-surface-border bg-surface-elevated p-4 shadow-lg"
+          className="fixed inset-x-4 top-20 z-50 rounded-lg border border-surface-border bg-surface-elevated p-4 shadow-lg sm:absolute sm:inset-x-auto sm:left-0 sm:top-full sm:mt-3 sm:w-72"
         >
           <form onSubmit={handleSubmit} className="flex flex-col gap-3">
-            <div className="flex flex-col gap-1">
-              <label htmlFor="login-email" className="text-xs font-medium text-text-muted">
-                E-mail
-              </label>
-              <input
-                id="login-email"
-                type="email"
-                required
-                autoComplete="email"
-                className="w-full rounded-md border border-input-border bg-input px-3 py-2 text-sm text-text-strong placeholder-text-muted focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
-              />
-            </div>
+            <Input id="login-email" label="E-mail" type="email" required autoComplete="email" />
 
-            <div className="flex flex-col gap-1">
-              <div className="flex items-center justify-between">
-                <label htmlFor="login-password" className="text-xs font-medium text-text-muted">
-                  Senha
-                </label>
-                <a href="/esqueci-senha" className="text-xs text-text-muted transition-colors hover:text-text-strong">
-                  Esqueci a senha
-                </a>
-              </div>
-              <input
-                id="login-password"
-                type="password"
-                required
-                autoComplete="current-password"
-                className="w-full rounded-md border border-input-border bg-input px-3 py-2 text-sm text-text-strong placeholder-text-muted focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
-              />
-            </div>
+            <Input
+              id="login-password"
+              label={
+                <span className="flex items-center justify-between">
+                  <span>Senha</span>
+                  <Link to="/esqueci-senha" className="hover:text-text-strong">
+                    Esqueci a senha
+                  </Link>
+                </span>
+              }
+              type="password"
+              required
+              autoComplete="current-password"
+            />
 
             <button
               type="submit"
@@ -92,9 +80,13 @@ const LoginDropdown = () => {
 
           <div className="mt-4 border-t border-surface-border pt-3 text-center text-sm text-text-muted">
             Não tem uma conta?{' '}
-            <a href="/cadastrar" className="font-medium text-brand-accent transition-colors hover:text-brand-accent-hover">
+            <Link
+              to="/cadastrar"
+              onClick={() => setIsOpen(false)}
+              className="font-medium text-brand-accent transition-colors hover:text-brand-accent-hover"
+            >
               Cadastrar
-            </a>
+            </Link>
           </div>
         </div>
       )}
