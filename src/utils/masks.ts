@@ -25,3 +25,5 @@ export const formatPhone = (value: string) => {
 
   return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`;
 };
+
+export const onlyDigits = (value: string) => value.replace(/\D/g, '');

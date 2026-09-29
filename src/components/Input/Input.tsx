@@ -17,7 +17,7 @@ const Input = ({ label, id, error, className, ref, ...props }: InputProps) => {
         id={id}
         ref={ref}
         aria-invalid={Boolean(error)}
-        className={`w-full rounded-md border border-input-border bg-input px-3 py-2 text-sm text-text-strong placeholder-text-muted focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand ${className ?? ''}`}
+        className={`w-full rounded-md border border-input-border bg-input px-3 py-2 text-sm text-text-strong placeholder-text-muted focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand disabled:cursor-not-allowed disabled:opacity-60 ${className ?? ''}`}
         {...props}
       />
       {error && <span className="text-xs text-danger">{error}</span>}

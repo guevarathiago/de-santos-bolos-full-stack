@@ -2,12 +2,21 @@ import { useEffect, useRef, useState } from 'react';
 import { UserIcon } from '@heroicons/react/24/outline';
 import { Link } from 'react-router';
 import Input from '../Input/Input';
+import { useAuth } from '../../hooks/useAuth';
+import { getLoginErrorMessage } from '../../utils/authErrors';
 
 const LoginDropdown = () => {
+  const { login } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    if (isLoading) {
+      return;
+    }
+
     const handleClickOutside = (event: MouseEvent) => {
       if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
         setIsOpen(false);
@@ -27,21 +36,39 @@ const LoginDropdown = () => {
       document.removeEventListener('mousedown', handleClickOutside);
       document.removeEventListener('keydown', handleEscape);
     };
-  }, []);
+  }, [isLoading]);
 
-  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    setIsOpen(false);
+
+    const formData = new FormData(event.currentTarget);
+    const email = String(formData.get('email'));
+    const password = String(formData.get('password'));
+
+    setError('');
+    setIsLoading(true);
+
+    try {
+      await login({ email, password });
+      setIsOpen(false);
+    } catch (err) {
+      setError(getLoginErrorMessage(err));
+    } finally {
+      setIsLoading(false);
+    }
   };
+
+  const linkDisabledClass = isLoading ? 'pointer-events-none opacity-60' : '';
 
   return (
     <div ref={containerRef} className="relative">
       <button
         type="button"
         onClick={() => setIsOpen((prev) => !prev)}
+        disabled={isLoading}
         aria-haspopup="menu"
         aria-expanded={isOpen}
-        className="flex items-center gap-1.5 text-sm font-medium text-text transition-colors hover:text-text-strong"
+        className="flex items-center gap-1.5 text-sm font-medium text-text transition-colors hover:text-text-strong disabled:cursor-not-allowed disabled:opacity-60"
       >
         <UserIcon className="h-5 w-5" aria-hidden="true" />
         Entrar
@@ -53,28 +80,51 @@ const LoginDropdown = () => {
           className="fixed inset-x-4 top-20 z-50 rounded-lg border border-surface-border bg-surface-elevated p-4 shadow-lg sm:absolute sm:inset-x-auto sm:left-0 sm:top-full sm:mt-3 sm:w-72"
         >
           <form onSubmit={handleSubmit} className="flex flex-col gap-3">
-            <Input id="login-email" label="E-mail" type="email" required autoComplete="email" />
+            <Input
+              id="login-email"
+              name="email"
+              label="E-mail"
+              type="email"
+              required
+              autoComplete="email"
+              disabled={isLoading}
+            />
 
             <Input
               id="login-password"
               label={
                 <span className="flex items-center justify-between">
                   <span>Senha</span>
-                  <Link to="/esqueci-senha" className="hover:text-text-strong">
+                  <Link
+                    to="/esqueci-senha"
+                    onClick={() => setIsOpen(false)}
+                    aria-disabled={isLoading}
+                    tabIndex={isLoading ? -1 : undefined}
+                    className={`hover:text-text-strong ${linkDisabledClass}`}
+                  >
                     Esqueci a senha
                   </Link>
                 </span>
               }
+              name="password"
               type="password"
               required
               autoComplete="current-password"
+              disabled={isLoading}
             />
+
+            {error && (
+              <span role="alert" className="text-xs text-danger">
+                {error}
+              </span>
+            )}
 
             <button
               type="submit"
-              className="mt-1 w-full rounded-md bg-brand py-2 text-sm font-semibold text-text-strong transition-colors hover:bg-brand-hover"
+              disabled={isLoading}
+              className="mt-1 w-full rounded-md bg-brand py-2 text-sm font-semibold text-text-strong transition-colors hover:bg-brand-hover disabled:cursor-not-allowed disabled:opacity-60"
             >
-              Entrar
+              {isLoading ? 'Entrando...' : 'Entrar'}
             </button>
           </form>
 
@@ -83,7 +133,9 @@ const LoginDropdown = () => {
             <Link
               to="/cadastrar"
               onClick={() => setIsOpen(false)}
-              className="font-medium text-brand-accent transition-colors hover:text-brand-accent-hover"
+              aria-disabled={isLoading}
+              tabIndex={isLoading ? -1 : undefined}
+              className={`font-medium text-brand-accent transition-colors hover:text-brand-accent-hover ${linkDisabledClass}`}
             >
               Cadastrar
             </Link>

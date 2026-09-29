@@ -1,15 +1,21 @@
 import { useState } from 'react';
 import type { ChangeEvent, FormEvent } from 'react';
-import { Link } from 'react-router';
+import { Link, useNavigate } from 'react-router';
 import Input from '../components/Input/Input';
 import logoRedondo from '../assets/logoRedondo.png';
-import { formatCep, formatPhone } from '../utils/masks';
+import { formatCep, formatPhone, onlyDigits } from '../utils/masks';
+import { useAuth } from '../hooks/useAuth';
+import { getLoginErrorMessage, getRegisterErrorMessage } from '../utils/authErrors';
 
 type Mode = 'cadastro' | 'login';
 
 const SignUp = () => {
+  const navigate = useNavigate();
+  const { login, register } = useAuth();
   const [mode, setMode] = useState<Mode>('cadastro');
   const [passwordError, setPasswordError] = useState('');
+  const [submitError, setSubmitError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
   const [cep, setCep] = useState('');
   const [celular, setCelular] = useState('');
 
@@ -21,12 +27,12 @@ const SignUp = () => {
     setCelular(formatPhone(event.target.value));
   };
 
-  const handleSignUpSubmit = (event: FormEvent<HTMLFormElement>) => {
+  const handleSignUpSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
     const formData = new FormData(event.currentTarget);
-    const password = formData.get('password');
-    const confirmPassword = formData.get('confirmPassword');
+    const password = String(formData.get('password'));
+    const confirmPassword = String(formData.get('confirmPassword'));
 
     if (password !== confirmPassword) {
       setPasswordError('As senhas não coincidem');
@@ -34,16 +40,61 @@ const SignUp = () => {
     }
 
     setPasswordError('');
+    setSubmitError('');
+    setIsLoading(true);
+
+    try {
+      await register({
+        name: String(formData.get('name')).trim(),
+        email: String(formData.get('email')).trim(),
+        password,
+        celular: onlyDigits(celular),
+        cep: onlyDigits(cep),
+      });
+      navigate('/');
+    } catch (err) {
+      setSubmitError(getRegisterErrorMessage(err));
+      setIsLoading(false);
+    }
   };
 
-  const handleLoginSubmit = (event: FormEvent<HTMLFormElement>) => {
+  const handleLoginSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+
+    const formData = new FormData(event.currentTarget);
+
+    setSubmitError('');
+    setIsLoading(true);
+
+    try {
+      await login({
+        email: String(formData.get('email')),
+        password: String(formData.get('password')),
+      });
+      navigate('/');
+    } catch (err) {
+      setSubmitError(getLoginErrorMessage(err));
+      setIsLoading(false);
+    }
   };
 
   const switchMode = (nextMode: Mode) => {
     setPasswordError('');
+    setSubmitError('');
     setMode(nextMode);
   };
+
+  const errorAlert = submitError && (
+    <span role="alert" className="text-xs text-danger">
+      {submitError}
+    </span>
+  );
+
+  const submitButtonClass =
+    'mt-2 w-full cursor-pointer rounded-md bg-brand py-2.5 text-sm font-semibold text-text-strong transition-colors hover:bg-brand-hover disabled:cursor-not-allowed disabled:opacity-60';
+
+  const textButtonClass =
+    'cursor-pointer font-medium text-brand-accent transition-colors hover:text-brand-accent-hover disabled:cursor-not-allowed disabled:opacity-60';
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-surface px-4 py-2">
@@ -58,9 +109,9 @@ const SignUp = () => {
             <p className="mt-1 text-center text-sm text-text-muted">Preencha os dados abaixo para se cadastrar</p>
 
             <form onSubmit={handleSignUpSubmit} className="mt-6 flex flex-col gap-4">
-              <Input id="signup-name" name="name" label="Nome completo" type="text" autoComplete="name" required />
+              <Input id="signup-name" name="name" label="Nome completo" type="text" autoComplete="name" required disabled={isLoading} />
 
-              <Input id="signup-email" name="email" label="E-mail" type="email" autoComplete="email" required />
+              <Input id="signup-email" name="email" label="E-mail" type="email" autoComplete="email" required disabled={isLoading} />
 
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <Input
@@ -75,6 +126,7 @@ const SignUp = () => {
                   value={celular}
                   onChange={handleCelularChange}
                   required
+                  disabled={isLoading}
                 />
 
                 <Input
@@ -89,6 +141,7 @@ const SignUp = () => {
                   value={cep}
                   onChange={handleCepChange}
                   required
+                  disabled={isLoading}
                 />
               </div>
 
@@ -99,6 +152,7 @@ const SignUp = () => {
                 type="password"
                 autoComplete="new-password"
                 required
+                disabled={isLoading}
               />
 
               <Input
@@ -108,14 +162,14 @@ const SignUp = () => {
                 type="password"
                 autoComplete="new-password"
                 required
+                disabled={isLoading}
                 error={passwordError}
               />
 
-              <button
-                type="submit"
-                className="mt-2 w-full rounded-md bg-brand py-2.5 text-sm font-semibold text-text-strong transition-colors hover:bg-brand-hover"
-              >
-                Criar conta
+              {errorAlert}
+
+              <button type="submit" disabled={isLoading} className={submitButtonClass}>
+                {isLoading ? 'Criando conta...' : 'Criar conta'}
               </button>
             </form>
 
@@ -124,7 +178,8 @@ const SignUp = () => {
               <button
                 type="button"
                 onClick={() => switchMode('login')}
-                className="font-medium text-brand-accent transition-colors hover:text-brand-accent-hover"
+                disabled={isLoading}
+                className={textButtonClass}
               >
                 Entrar
               </button>
@@ -136,7 +191,7 @@ const SignUp = () => {
             <p className="mt-1 text-center text-sm text-text-muted">Acesse sua conta para continuar</p>
 
             <form onSubmit={handleLoginSubmit} className="mt-6 flex flex-col gap-4">
-              <Input id="login-page-email" name="email" label="E-mail" type="email" autoComplete="email" required />
+              <Input id="login-page-email" name="email" label="E-mail" type="email" autoComplete="email" required disabled={isLoading} />
 
               <Input
                 id="login-page-password"
@@ -144,7 +199,12 @@ const SignUp = () => {
                 label={
                   <span className="flex items-center justify-between">
                     <span>Senha</span>
-                    <Link to="/esqueci-senha" className="hover:text-text-strong">
+                    <Link
+                      to="/esqueci-senha"
+                      aria-disabled={isLoading}
+                      tabIndex={isLoading ? -1 : undefined}
+                      className={`hover:text-text-strong ${isLoading ? 'pointer-events-none opacity-60' : ''}`}
+                    >
                       Esqueci a senha
                     </Link>
                   </span>
@@ -152,13 +212,13 @@ const SignUp = () => {
                 type="password"
                 autoComplete="current-password"
                 required
+                disabled={isLoading}
               />
 
-              <button
-                type="submit"
-                className="mt-2 w-full rounded-md bg-brand py-2.5 text-sm font-semibold text-text-strong transition-colors hover:bg-brand-hover"
-              >
-                Entrar
+              {errorAlert}
+
+              <button type="submit" disabled={isLoading} className={submitButtonClass}>
+                {isLoading ? 'Entrando...' : 'Entrar'}
               </button>
             </form>
 
@@ -167,7 +227,8 @@ const SignUp = () => {
               <button
                 type="button"
                 onClick={() => switchMode('cadastro')}
-                className="font-medium text-brand-accent transition-colors hover:text-brand-accent-hover"
+                disabled={isLoading}
+                className={textButtonClass}
               >
                 Cadastrar
               </button>
