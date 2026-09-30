@@ -1,11 +1,12 @@
 import { ArrowRightStartOnRectangleIcon, UserPlusIcon } from '@heroicons/react/24/outline';
-import { Link } from 'react-router';
+import { Link, useLocation } from 'react-router';
 import LoginDropdown from './LoginDropdown';
 import { useAuth } from '../../hooks/useAuth';
 import logo from '../../assets/logo.png';
 
 const Header = () => {
   const { user, logout } = useAuth();
+  const { pathname } = useLocation();
 
   return (
     <header className="sticky top-0 z-50 border-b border-surface-border bg-surface/90 backdrop-blur-md">
@@ -30,14 +31,16 @@ const Header = () => {
           </div>
         ) : (
           <div className="flex items-center gap-3 sm:gap-5">
-            <LoginDropdown />
-            <Link
-              to="/cadastrar"
-              className="flex items-center gap-1.5 rounded-md bg-brand px-3 py-1.5 text-sm font-semibold text-text-strong transition-colors hover:bg-brand-hover sm:px-4"
-            >
-              <UserPlusIcon className="h-5 w-5" aria-hidden="true" />
-              Cadastrar
-            </Link>
+            {pathname !== '/entrar' && <LoginDropdown />}
+            {pathname !== '/cadastrar' && (
+              <Link
+                to="/cadastrar"
+                className="flex items-center gap-1.5 rounded-md bg-brand px-3 py-1.5 text-sm font-semibold text-text-strong transition-colors hover:bg-brand-hover sm:px-4"
+              >
+                <UserPlusIcon className="h-5 w-5" aria-hidden="true" />
+                Cadastrar
+              </Link>
+            )}
           </div>
         )}
       </div>

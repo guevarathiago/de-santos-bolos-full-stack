@@ -1,29 +1,43 @@
-import { createBrowserRouter, Outlet } from "react-router";
-import Home from "./pages/Home";
-import SignUp from "./pages/SignUp";
-import Header from "./components/Header/Header";
-
-const Layout = () => {
-  return (
-    <div>
-      <Header />
-      <Outlet />
-    </div>
-  );
-}
+import { createBrowserRouter } from 'react-router';
+import RootLayout from './layouts/RootLayout';
+import GuestRoute from './components/GuestRoute/GuestRoute';
+import Home from './pages/Home';
+import Login from './pages/Login';
+import SignUp from './pages/SignUp';
+import ForgotPassword from './pages/ForgotPassword';
+import NotFound from './pages/NotFound';
+import ErrorPage from './pages/ErrorPage';
 
 export const router = createBrowserRouter([
   {
-    element: <Layout />,
+    element: <RootLayout />,
+    errorElement: <ErrorPage />,
     children: [
       {
-        path: "/",
-        element: <Home/>,
+        path: '/',
+        element: <Home />,
       },
       {
-        path: "/cadastrar",
-        element: <SignUp />,
+        element: <GuestRoute />,
+        children: [
+          {
+            path: '/entrar',
+            element: <Login />,
+          },
+          {
+            path: '/cadastrar',
+            element: <SignUp />,
+          },
+          {
+            path: '/esqueci-senha',
+            element: <ForgotPassword />,
+          },
+        ],
       },
-    ]
-  }
+      {
+        path: '*',
+        element: <NotFound />,
+      },
+    ],
+  },
 ]);
