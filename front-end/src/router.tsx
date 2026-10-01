@@ -5,6 +5,8 @@ import Home from './pages/Home';
 import Login from './pages/Login';
 import SignUp from './pages/SignUp';
 import ForgotPassword from './pages/ForgotPassword';
+import Menu from './pages/Menu';
+import Orders from './pages/Orders';
 import NotFound from './pages/NotFound';
 import ErrorPage from './pages/ErrorPage';
 
@@ -16,6 +18,14 @@ export const router = createBrowserRouter([
       {
         path: '/',
         element: <Home />,
+      },
+      {
+        path: '/cardapio',
+        element: <Menu />,
+      },
+      {
+        path: '/pedidos',
+        element: <Orders />,
       },
       {
         element: <GuestRoute />,

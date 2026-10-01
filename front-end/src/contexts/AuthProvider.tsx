@@ -1,56 +1,61 @@
-import { useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
+import { useNavigate } from 'react-router';
 import { AuthContext } from './AuthContext';
-import { login as loginRequest, register as registerRequest } from '../services/auth';
+import {
+  getMe,
+  login as loginRequest,
+  logout as logoutRequest,
+  register as registerRequest,
+} from '../services/auth';
 import type { LoginPayload, RegisterPayload, User } from '../services/auth';
 
-const STORAGE_KEY = 'user';
-
-const loadStoredUser = (): User | null => {
-  try {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    return stored ? JSON.parse(stored) : null;
-  } catch {
-    return null;
-  }
-};
-
 const AuthProvider = ({ children }: { children: ReactNode }) => {
-  const [user, setUser] = useState<User | null>(loadStoredUser);
+  const [user, setUser] = useState<User | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const navigate = useNavigate();
 
-  const saveUser = (user: User) => {
-    setUser(user);
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(user));
-    } catch {
-      return;
-    }
-  };
+  useEffect(() => {
+    let ignore = false;
 
-  const login = async (payload: LoginPayload) => {
-    const { user } = await loginRequest(payload);
-    saveUser(user);
-  };
+    getMe()
+      .then(({ user: currentUser }) => {
+        if (!ignore) setUser(currentUser);
+      })
+      .catch(() => {
+        if (!ignore) setUser(null);
+      })
+      .finally(() => {
+        if (!ignore) setIsLoading(false);
+      });
 
-  const register = async (payload: RegisterPayload) => {
-    const { user } = await registerRequest(payload);
-    saveUser(user);
-  };
+    return () => {
+      ignore = true;
+    };
+  }, []);
 
-  const logout = () => {
+  const login = useCallback(async (payload: LoginPayload) => {
+    const { user: loggedUser } = await loginRequest(payload);
+    setUser(loggedUser);
+  }, []);
+
+  const register = useCallback(async (payload: RegisterPayload) => {
+    const { user: newUser } = await registerRequest(payload);
+    setUser(newUser);
+  }, []);
+
+  const logout = useCallback(async () => {
+    await logoutRequest().catch(() => undefined);
     setUser(null);
-    try {
-      localStorage.removeItem(STORAGE_KEY);
-    } catch {
-      return;
-    }
-  };
+    navigate('/', { replace: true });
+  }, [navigate]);
 
-  return (
-    <AuthContext.Provider value={{ user, isAuthenticated: user !== null, login, register, logout }}>
-      {children}
-    </AuthContext.Provider>
+  const value = useMemo(
+    () => ({ user, isAuthenticated: user !== null, isLoading, login, register, logout }),
+    [user, isLoading, login, register, logout],
   );
+
+  return <AuthContext value={value}>{children}</AuthContext>;
 };
 
 export default AuthProvider;

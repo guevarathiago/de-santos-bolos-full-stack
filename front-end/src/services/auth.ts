@@ -32,3 +32,12 @@ export const register = async (payload: RegisterPayload) => {
   const { data } = await api.post<AuthResponse>('/register', payload);
   return data;
 };
+
+export const getMe = async () => {
+  const { data } = await api.get<AuthResponse>('/me');
+  return data;
+};
+
+export const logout = async () => {
+  await api.post('/logout');
+};
