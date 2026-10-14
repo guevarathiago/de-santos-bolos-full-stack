@@ -9,6 +9,9 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "try:embeddings": "tsx --env-file=.env ./scripts/try-embeddings.ts",
+    "try:extract": "tsx ./scripts/try-extract.ts",
+    "try:chunks": "tsx ./scripts/try-chunks.ts",
+    "ingest:samples": "tsx --env-file=.env ./scripts/ingest-samples.ts",
     "typeorm": "tsx --env-file=.env ./node_modules/typeorm/cli.js",
     "migration:run": "npm run typeorm -- migration:run -d ./src/database/data-source.ts",
     "migration:revert": "npm run typeorm -- migration:revert -d ./src/database/data-source.ts",
@@ -43,6 +46,7 @@
     "pg": "^8.23.0",
     "reflect-metadata": "^0.2.2",
     "typeorm": "^1.1.2",
+    "unpdf": "^1.8.1",
     "zod": "^4.6.7"
   }
 }
