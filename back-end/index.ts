@@ -1,21 +1,21 @@
-import express, { type Request, type Response } from 'express';
-import { connection } from './src/db.js';
-import cors from 'cors';
-import { router } from './src/routes.js';
-import cookieParser from 'cookie-parser';
+import { createApp } from './src/app.js';
+import { env } from './src/config/env.js';
+import { AppDataSource } from './src/database/data-source.js';
+import { createAuthService } from './src/modules/auth/auth.service.js';
+import { User } from './src/modules/users/user.entity.js';
 
+try {
+    await AppDataSource.initialize();
+    console.log('Database connected successfully');
+} catch (error) {
+    console.error('Error connecting to the database:', error);
+    process.exit(1);
+}
 
-const app = express();
-app.use(express.json());
-app.use(cookieParser());
-app.use(cors({
-    origin: 'http://localhost:5173',
-    credentials: true
-}));
-app.use(router);
+const app = createApp({
+    authService: createAuthService(AppDataSource.getRepository(User)),
+});
 
-connection();
-
-app.listen(3000, () => {
-    console.log(`Server is running on port 3000`);
+app.listen(env.PORT, () => {
+    console.log(`Server is running on port ${env.PORT}`);
 });
