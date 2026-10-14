@@ -8,6 +8,7 @@ import { HttpError } from './errors/http-error.js';
 import { authenticate } from './middlewares/authenticate.js';
 import { authorize } from './middlewares/authorize.js';
 import type { AuthService } from './modules/auth/auth.service.js';
+import type { DocumentService } from './modules/documents/document.service.js';
 import { signToken } from './modules/auth/token.js';
 import { UserRole } from './modules/users/user.entity.js';
 
@@ -20,11 +21,14 @@ const makeAuthService = (overrides: Partial<AuthService> = {}): AuthService => (
     ...overrides,
 });
 
+const makeApp = (authService = makeAuthService()) =>
+    createApp({ authService, documentService: {} as DocumentService });
+
 const tokenCookie = (token: string) => [`token=${token}`];
 
 describe('POST /login', () => {
     it('sets an httpOnly cookie on success', async () => {
-        const res = await request(createApp({ authService: makeAuthService() }))
+        const res = await request(makeApp())
             .post('/login')
             .send({ email: 'maria@example.com', password: 'secret' });
 
@@ -36,7 +40,7 @@ describe('POST /login', () => {
     it('returns 400 and skips the service for an invalid body', async () => {
         const authService = makeAuthService();
 
-        const res = await request(createApp({ authService })).post('/login').send({ email: 'x' });
+        const res = await request(makeApp(authService)).post('/login').send({ email: 'x' });
 
         expect(res.status).toBe(400);
         expect(res.body.errors).toHaveProperty('email');
@@ -46,7 +50,7 @@ describe('POST /login', () => {
     it('maps service HttpErrors to their status', async () => {
         const authService = makeAuthService({ login: vi.fn().mockRejectedValue(new HttpError(401, 'Invalid')) });
 
-        const res = await request(createApp({ authService }))
+        const res = await request(makeApp(authService))
             .post('/login')
             .send({ email: 'maria@example.com', password: 'wrong' });
 
@@ -57,7 +61,7 @@ describe('POST /login', () => {
         vi.spyOn(console, 'error').mockImplementation(() => {});
         const authService = makeAuthService({ login: vi.fn().mockRejectedValue(new Error('db down')) });
 
-        const res = await request(createApp({ authService }))
+        const res = await request(makeApp(authService))
             .post('/login')
             .send({ email: 'maria@example.com', password: 'secret' });
 
@@ -67,7 +71,7 @@ describe('POST /login', () => {
 });
 
 describe('GET /me', () => {
-    const app = createApp({ authService: makeAuthService() });
+    const app = makeApp();
 
     it('returns the user from a valid token', async () => {
         const res = await request(app).get('/me').set('Cookie', tokenCookie(signToken(maria)));

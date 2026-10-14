@@ -62,6 +62,18 @@ export const createDocumentService = ({ documents, embeddings }: DocumentService
 
         return documents.findOneByOrFail({ id: document.id });
     },
+
+    list() {
+        return documents.find({ order: { createdAt: 'DESC' } });
+    },
+
+    async remove(id: string) {
+        const { affected } = await documents.delete(id);
+
+        if (!affected) {
+            throw new HttpError(404, 'Document not found');
+        }
+    },
 });
 
 export type DocumentService = ReturnType<typeof createDocumentService>;
