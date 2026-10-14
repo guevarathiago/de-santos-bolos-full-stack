@@ -8,6 +8,7 @@ export default defineConfig({
             NODE_ENV: 'test',
             DATABASE_URL: 'postgresql://test:test@localhost:5432/test',
             JWT_SECRET: 'test-secret',
+            GEMINI_API_KEY: 'test-gemini-key',
         },
     },
 });

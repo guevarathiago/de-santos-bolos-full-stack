@@ -8,6 +8,7 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
+    "try:embeddings": "tsx --env-file=.env ./scripts/try-embeddings.ts",
     "typeorm": "tsx --env-file=.env ./node_modules/typeorm/cli.js",
     "migration:run": "npm run typeorm -- migration:run -d ./src/database/data-source.ts",
     "migration:revert": "npm run typeorm -- migration:revert -d ./src/database/data-source.ts",
@@ -33,6 +34,7 @@
     "vitest": "^5.0.4"
   },
   "dependencies": {
+    "@google/genai": "^2.29.1",
     "bcrypt": "^6.0.0",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.6",

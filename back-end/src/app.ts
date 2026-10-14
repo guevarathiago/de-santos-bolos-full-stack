@@ -10,7 +10,6 @@ type AppDependencies = {
     authService: AuthService;
 };
 
-// Dependencies are injected so tests can build the app without a database.
 export const createApp = ({ authService }: AppDependencies) => {
     const app = express();
 

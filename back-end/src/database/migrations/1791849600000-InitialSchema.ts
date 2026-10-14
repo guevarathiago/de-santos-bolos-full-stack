@@ -1,7 +1,5 @@
 import type { MigrationInterface, QueryRunner } from 'typeorm';
 
-// Baseline: mirrors the "User" table created by Prisma (`db push`).
-// IF NOT EXISTS lets it run on the existing database without touching data.
 export class InitialSchema1791849600000 implements MigrationInterface {
     name = 'InitialSchema1791849600000';
 

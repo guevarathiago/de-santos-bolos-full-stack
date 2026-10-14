@@ -4,7 +4,6 @@ export class UserUuidAndRole1791849600001 implements MigrationInterface {
     name = 'UserUuidAndRole1791849600001';
 
     public async up(queryRunner: QueryRunner): Promise<void> {
-        // Prisma generated UUIDs in the client and stored them as TEXT; move generation to the database.
         await queryRunner.query(`ALTER TABLE "User" ALTER COLUMN "id" TYPE UUID USING "id"::uuid`);
         await queryRunner.query(`ALTER TABLE "User" ALTER COLUMN "id" SET DEFAULT gen_random_uuid()`);
 

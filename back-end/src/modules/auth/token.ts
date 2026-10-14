@@ -17,6 +17,5 @@ export type TokenPayload = z.infer<typeof tokenPayloadSchema>;
 export const signToken = (payload: TokenPayload) =>
     jwt.sign(payload, env.JWT_SECRET, { expiresIn: TOKEN_MAX_AGE / 1000 });
 
-// Throws if the token is invalid, expired or was issued without the expected claims.
 export const verifyToken = (token: string): TokenPayload =>
     tokenPayloadSchema.parse(jwt.verify(token, env.JWT_SECRET));
