@@ -6,6 +6,8 @@ import { gemini } from './src/modules/ai/gemini.client.js';
 import { createAuthService } from './src/modules/auth/auth.service.js';
 import { Document } from './src/modules/documents/document.entity.js';
 import { createDocumentService } from './src/modules/documents/document.service.js';
+import { createRagService } from './src/modules/rag/rag.service.js';
+import { createRetrievalService } from './src/modules/rag/retrieval.service.js';
 import { User } from './src/modules/users/user.entity.js';
 
 try {
@@ -16,11 +18,18 @@ try {
     process.exit(1);
 }
 
+const embeddings = createEmbeddingService(gemini.models);
+
 const app = createApp({
     authService: createAuthService(AppDataSource.getRepository(User)),
     documentService: createDocumentService({
         documents: AppDataSource.getRepository(Document),
-        embeddings: createEmbeddingService(gemini.models),
+        embeddings,
+    }),
+    ragService: createRagService({
+        retrieval: createRetrievalService({ manager: AppDataSource.manager, embeddings }),
+        client: gemini.models,
+        model: env.GEMINI_CHAT_MODEL,
     }),
 });
 

@@ -9,6 +9,7 @@ import { authenticate } from './middlewares/authenticate.js';
 import { authorize } from './middlewares/authorize.js';
 import type { AuthService } from './modules/auth/auth.service.js';
 import type { DocumentService } from './modules/documents/document.service.js';
+import type { RagService } from './modules/rag/rag.service.js';
 import { signToken } from './modules/auth/token.js';
 import { UserRole } from './modules/users/user.entity.js';
 
@@ -22,7 +23,7 @@ const makeAuthService = (overrides: Partial<AuthService> = {}): AuthService => (
 });
 
 const makeApp = (authService = makeAuthService()) =>
-    createApp({ authService, documentService: {} as DocumentService });
+    createApp({ authService, documentService: {} as DocumentService, ragService: {} as RagService });
 
 const tokenCookie = (token: string) => [`token=${token}`];
 

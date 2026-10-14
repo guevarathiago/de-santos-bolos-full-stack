@@ -2,7 +2,9 @@ import { createBrowserRouter } from 'react-router';
 import RootLayout from './layouts/RootLayout';
 import GuestRoute from './components/GuestRoute/GuestRoute';
 import AdminRoute from './components/AdminRoute/AdminRoute';
+import PrivateRoute from './components/PrivateRoute/PrivateRoute';
 import AdminDocuments from './pages/AdminDocuments';
+import Chat from './pages/Chat';
 import Home from './pages/Home';
 import Login from './pages/Login';
 import SignUp from './pages/SignUp';
@@ -43,6 +45,15 @@ export const router = createBrowserRouter([
           {
             path: '/esqueci-senha',
             element: <ForgotPassword />,
+          },
+        ],
+      },
+      {
+        element: <PrivateRoute />,
+        children: [
+          {
+            path: '/chat',
+            element: <Chat />,
           },
         ],
       },

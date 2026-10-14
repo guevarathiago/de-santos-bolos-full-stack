@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { createApp } from '../../app.js';
 import { HttpError } from '../../errors/http-error.js';
 import type { AuthService } from '../auth/auth.service.js';
+import type { RagService } from '../rag/rag.service.js';
 import { signToken } from '../auth/token.js';
 import { UserRole } from '../users/user.entity.js';
 import { DocumentStatus, type Document } from './document.entity.js';
@@ -24,7 +25,7 @@ const makeDocumentService = (overrides: Partial<DocumentService> = {}): Document
 });
 
 const makeApp = (documentService = makeDocumentService()) =>
-    createApp({ authService: {} as AuthService, documentService });
+    createApp({ authService: {} as AuthService, documentService, ragService: {} as RagService });
 
 const as = (user: typeof admin) => [`token=${signToken(user)}`];
 
