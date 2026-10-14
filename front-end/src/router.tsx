@@ -1,6 +1,8 @@
 import { createBrowserRouter } from 'react-router';
 import RootLayout from './layouts/RootLayout';
 import GuestRoute from './components/GuestRoute/GuestRoute';
+import AdminRoute from './components/AdminRoute/AdminRoute';
+import AdminDocuments from './pages/AdminDocuments';
 import Home from './pages/Home';
 import Login from './pages/Login';
 import SignUp from './pages/SignUp';
@@ -41,6 +43,15 @@ export const router = createBrowserRouter([
           {
             path: '/esqueci-senha',
             element: <ForgotPassword />,
+          },
+        ],
+      },
+      {
+        element: <AdminRoute />,
+        children: [
+          {
+            path: '/admin/documentos',
+            element: <AdminDocuments />,
           },
         ],
       },

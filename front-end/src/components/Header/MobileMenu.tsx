@@ -4,6 +4,7 @@ import {
   Bars3Icon,
   BookOpenIcon,
   ClipboardDocumentListIcon,
+  DocumentTextIcon,
   PlusIcon,
   XMarkIcon,
 } from '@heroicons/react/24/outline';
@@ -108,6 +109,14 @@ const MobileMenu = ({ onAdd }: MobileMenuProps) => {
                 Adicionar
               </button>
             </li>
+            {user?.role === 'ADMIN' && (
+              <li>
+                <NavLink to="/admin/documentos" onClick={close} className={navItemClass}>
+                  <DocumentTextIcon className="h-5 w-5" aria-hidden="true" />
+                  Base de conhecimento
+                </NavLink>
+              </li>
+            )}
             <li className="mt-2 border-t border-surface-border pt-2">
               <button
                 type="button"

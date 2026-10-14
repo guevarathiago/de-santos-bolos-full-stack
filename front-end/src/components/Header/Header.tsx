@@ -2,6 +2,7 @@ import {
   ArrowRightStartOnRectangleIcon,
   BookOpenIcon,
   ClipboardDocumentListIcon,
+  DocumentTextIcon,
   PlusIcon,
   ShoppingCartIcon,
   UserPlusIcon,
@@ -55,6 +56,16 @@ const Header = () => {
                 <NavLink to="/pedidos" aria-label="Pedidos" title="Pedidos" className={navIconClass}>
                   <ClipboardDocumentListIcon className="h-6 w-6" aria-hidden="true" />
                 </NavLink>
+                {user.role === 'ADMIN' && (
+                  <NavLink
+                    to="/admin/documentos"
+                    aria-label="Base de conhecimento"
+                    title="Base de conhecimento"
+                    className={navIconClass}
+                  >
+                    <DocumentTextIcon className="h-6 w-6" aria-hidden="true" />
+                  </NavLink>
+                )}
               </div>
               <button
                 type="button"

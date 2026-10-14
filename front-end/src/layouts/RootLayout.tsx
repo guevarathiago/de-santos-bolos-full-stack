@@ -1,4 +1,5 @@
 import { Outlet } from 'react-router';
+import { Toaster } from 'sonner';
 import AuthProvider from '../contexts/AuthProvider';
 import Header from '../components/Header/Header';
 import WhatsAppButton from '../components/WhatsAppButton/WhatsAppButton';
@@ -13,6 +14,7 @@ const RootLayout = () => {
         </main>
         <WhatsAppButton />
       </div>
+      <Toaster theme="dark" position="top-right" offset={{ top: 80 }} mobileOffset={{ top: 80 }} richColors closeButton />
     </AuthProvider>
   );
 };
