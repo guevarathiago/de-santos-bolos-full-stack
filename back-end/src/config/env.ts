@@ -7,6 +7,7 @@ const envSchema = z.object({
     JWT_SECRET: z.string().min(1),
     CORS_ORIGIN: z.string().default('http://localhost:5173'),
     GEMINI_API_KEY: z.string().min(1),
+    GEMINI_CHAT_MODEL: z.string().min(1).default('gemini-3.5-flash'),
 });
 
 const parsed = envSchema.safeParse(process.env);

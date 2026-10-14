@@ -12,6 +12,8 @@
     "try:extract": "tsx ./scripts/try-extract.ts",
     "try:chunks": "tsx ./scripts/try-chunks.ts",
     "ingest:samples": "tsx --env-file=.env ./scripts/ingest-samples.ts",
+    "try:search": "tsx --env-file=.env ./scripts/try-search.ts",
+    "try:ask": "tsx --env-file=.env ./scripts/try-ask.ts",
     "typeorm": "tsx --env-file=.env ./node_modules/typeorm/cli.js",
     "migration:run": "npm run typeorm -- migration:run -d ./src/database/data-source.ts",
     "migration:revert": "npm run typeorm -- migration:revert -d ./src/database/data-source.ts",
