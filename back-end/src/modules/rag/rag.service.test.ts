@@ -44,9 +44,46 @@ describe('ragService.answer', () => {
 
         expect(client.generateContent).toHaveBeenCalledWith({
             model: 'test-model',
-            contents: buildPrompt('Entregam em Bertioga?', [delivery]),
+            contents: [{ role: 'user', parts: [{ text: buildPrompt('Entregam em Bertioga?', [delivery]) }] }],
             config: { systemInstruction: SYSTEM_INSTRUCTION, temperature: 0.2 },
         });
+    });
+
+    it('sends the previous messages before the new question, as user and model turns', async () => {
+        const client = makeClient('R$ 15 [1].');
+        const history = [
+            { role: 'user' as const, content: 'Entregam em Bertioga?' },
+            { role: 'assistant' as const, content: 'Sim, às sextas.' },
+        ];
+
+        await createRagService({ retrieval: makeRetrieval([delivery]), client, model: 'm' })
+            .answer('e no Guarujá?', history);
+
+        expect(client.generateContent.mock.calls[0]?.[0].contents).toEqual([
+            { role: 'user', parts: [{ text: 'Entregam em Bertioga?' }] },
+            { role: 'model', parts: [{ text: 'Sim, às sextas.' }] },
+            { role: 'user', parts: [{ text: buildPrompt('e no Guarujá?', [delivery]) }] },
+        ]);
+    });
+
+    it('searches with the previous question so follow-ups find the right chunks', async () => {
+        const retrieval = makeRetrieval([delivery]);
+        const history = [
+            { role: 'user' as const, content: 'Entregam em Bertioga?' },
+            { role: 'assistant' as const, content: 'Sim, às sextas.' },
+        ];
+
+        await createRagService({ retrieval, client: makeClient('ok'), model: 'm' }).answer('e no Guarujá?', history);
+
+        expect(retrieval.search).toHaveBeenCalledWith('Entregam em Bertioga?\ne no Guarujá?');
+    });
+
+    it('searches with the question alone when there is no history', async () => {
+        const retrieval = makeRetrieval([delivery]);
+
+        await createRagService({ retrieval, client: makeClient('ok'), model: 'm' }).answer('Tem bolo sem glúten?');
+
+        expect(retrieval.search).toHaveBeenCalledWith('Tem bolo sem glúten?');
     });
 
     it('returns only the sources cited in the answer, without duplicates', async () => {
@@ -80,7 +117,7 @@ describe('ragService.answer', () => {
 
         await createRagService({ retrieval: makeRetrieval([delivery, weak]), client, model: 'm' }).answer('x');
 
-        expect(client.generateContent.mock.calls[0]?.[0].contents).not.toContain('irrelevante');
+        expect(JSON.stringify(client.generateContent.mock.calls[0]?.[0].contents)).not.toContain('irrelevante');
     });
 
     it('falls back to the default message when the model returns no text', async () => {

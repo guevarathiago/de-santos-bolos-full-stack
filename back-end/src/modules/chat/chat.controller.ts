@@ -4,8 +4,8 @@ import type { ChatMessageInput } from './chat.schemas.js';
 
 export const createChatController = (ragService: RagService) => ({
     async send(req: Request, res: Response) {
-        const { message } = req.body as ChatMessageInput;
+        const { message, history } = req.body as ChatMessageInput;
 
-        return res.status(200).json(await ragService.answer(message));
+        return res.status(200).json(await ragService.answer(message, history));
     },
 });

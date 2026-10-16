@@ -1,7 +1,6 @@
 import {
   ArrowRightStartOnRectangleIcon,
   BookOpenIcon,
-  ChatBubbleLeftRightIcon,
   ClipboardDocumentListIcon,
   DocumentTextIcon,
   PlusIcon,
@@ -56,9 +55,6 @@ const Header = () => {
                 </button>
                 <NavLink to="/pedidos" aria-label="Pedidos" title="Pedidos" className={navIconClass}>
                   <ClipboardDocumentListIcon className="h-6 w-6" aria-hidden="true" />
-                </NavLink>
-                <NavLink to="/chat" aria-label="Assistente" title="Assistente" className={navIconClass}>
-                  <ChatBubbleLeftRightIcon className="h-6 w-6" aria-hidden="true" />
                 </NavLink>
                 {user.role === 'ADMIN' && (
                   <NavLink

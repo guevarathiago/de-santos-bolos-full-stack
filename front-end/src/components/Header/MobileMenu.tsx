@@ -3,7 +3,6 @@ import {
   ArrowRightStartOnRectangleIcon,
   Bars3Icon,
   BookOpenIcon,
-  ChatBubbleLeftRightIcon,
   ClipboardDocumentListIcon,
   DocumentTextIcon,
   PlusIcon,
@@ -95,12 +94,6 @@ const MobileMenu = ({ onAdd }: MobileMenuProps) => {
               <NavLink to="/pedidos" onClick={close} className={navItemClass}>
                 <ClipboardDocumentListIcon className="h-5 w-5" aria-hidden="true" />
                 Pedidos
-              </NavLink>
-            </li>
-            <li>
-              <NavLink to="/chat" onClick={close} className={navItemClass}>
-                <ChatBubbleLeftRightIcon className="h-5 w-5" aria-hidden="true" />
-                Assistente
               </NavLink>
             </li>
             <li>

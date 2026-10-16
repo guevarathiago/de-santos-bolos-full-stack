@@ -6,6 +6,11 @@ export type ChatSource = {
   page?: number;
 };
 
+export type ChatHistoryMessage = {
+  role: 'user' | 'assistant';
+  content: string;
+};
+
 export type ChatReply = {
   answer: string;
   sources: ChatSource[];
@@ -13,7 +18,7 @@ export type ChatReply = {
 
 const CHAT_TIMEOUT_MS = 60000;
 
-export const sendChatMessage = async (message: string) => {
-  const { data } = await api.post<ChatReply>('/chat', { message }, { timeout: CHAT_TIMEOUT_MS });
+export const sendChatMessage = async (message: string, history: ChatHistoryMessage[]) => {
+  const { data } = await api.post<ChatReply>('/chat', { message, history }, { timeout: CHAT_TIMEOUT_MS });
   return data;
 };

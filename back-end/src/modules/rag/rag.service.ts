@@ -1,4 +1,4 @@
-import type { GoogleGenAI } from '@google/genai';
+import type { Content, GoogleGenAI } from '@google/genai';
 import { buildPrompt, SYSTEM_INSTRUCTION } from './prompt.js';
 import type { RetrievalService, RetrievedChunk } from './retrieval.service.js';
 
@@ -11,6 +11,11 @@ export type Source = {
     documentId: string;
     filename: string;
     page?: number;
+};
+
+export type HistoryMessage = {
+    role: 'user' | 'assistant';
+    content: string;
 };
 
 type ChatClient = Pick<GoogleGenAI['models'], 'generateContent'>;
@@ -35,9 +40,24 @@ const citedSources = (answer: string, chunks: RetrievedChunk[]): Source[] => {
     return [...sources.values()];
 };
 
+const searchQuery = (question: string, history: HistoryMessage[]) => {
+    const previousQuestion = history.findLast((message) => message.role === 'user');
+
+    return previousQuestion ? `${previousQuestion.content}\n${question}` : question;
+};
+
+const toContents = (history: HistoryMessage[], prompt: string): Content[] => [
+    ...history.map(({ role, content }) => ({
+        role: role === 'assistant' ? 'model' : 'user',
+        parts: [{ text: content }],
+    })),
+    { role: 'user', parts: [{ text: prompt }] },
+];
+
 export const createRagService = ({ retrieval, client, model }: RagDependencies) => ({
-    async answer(question: string) {
-        const chunks = (await retrieval.search(question)).filter((chunk) => chunk.similarity >= MIN_SIMILARITY);
+    async answer(question: string, history: HistoryMessage[] = []) {
+        const chunks = (await retrieval.search(searchQuery(question, history)))
+            .filter((chunk) => chunk.similarity >= MIN_SIMILARITY);
 
         if (chunks.length === 0) {
             return { answer: NO_CONTEXT_ANSWER, sources: [] };
@@ -45,7 +65,7 @@ export const createRagService = ({ retrieval, client, model }: RagDependencies) 
 
         const response = await client.generateContent({
             model,
-            contents: buildPrompt(question, chunks),
+            contents: toContents(history, buildPrompt(question, chunks)),
             config: { systemInstruction: SYSTEM_INSTRUCTION, temperature: 0.2 },
         });
 
