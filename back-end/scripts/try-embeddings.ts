@@ -1,4 +1,4 @@
-import { createEmbeddingService } from '../src/modules/ai/embedding.service.js';
+import { GeminiEmbeddings } from '../src/modules/ai/embedding.service.js';
 import { gemini } from '../src/modules/ai/gemini.client.js';
 
 const sentences = [
@@ -22,7 +22,7 @@ const cosineSimilarity = (a: number[], b: number[]) => {
     return dot / (Math.sqrt(normA) * Math.sqrt(normB));
 };
 
-const embeddings = createEmbeddingService(gemini.models);
+const embeddings = new GeminiEmbeddings(gemini.models);
 const vectors = await embeddings.embedDocuments(sentences);
 
 console.log(`\nReceived ${vectors.length} vectors with ${vectors[0]?.length} numbers each.`);

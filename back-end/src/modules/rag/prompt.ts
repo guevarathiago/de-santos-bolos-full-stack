@@ -1,4 +1,6 @@
-import type { RetrievedChunk } from './retrieval.service.js';
+import type { DocumentInterface } from '@langchain/core/documents';
+import { ChatPromptTemplate, MessagesPlaceholder } from '@langchain/core/prompts';
+import type { RetrievedMetadata } from './retrieval.service.js';
 
 export const SYSTEM_INSTRUCTION = `Você é o assistente virtual da De Santos Bolos, uma confeitaria em Santos/SP.
 
@@ -9,13 +11,15 @@ Regras:
 - Nunca invente preços, prazos, produtos ou políticas.
 - Ao usar um trecho, cite o número dele entre colchetes, como [1] ou [2].`;
 
-const describeSource = ({ filename, metadata }: RetrievedChunk) =>
-    metadata.page ? `${filename}, página ${metadata.page}` : filename;
+const describeSource = ({ filename, page }: RetrievedMetadata) => (page ? `${filename}, página ${page}` : filename);
 
-export const buildPrompt = (question: string, chunks: RetrievedChunk[]) => {
-    const context = chunks
-        .map((chunk, index) => `[${index + 1}] (${describeSource(chunk)})\n${chunk.content}`)
+export const formatContext = (documents: DocumentInterface<RetrievedMetadata>[]) =>
+    documents
+        .map(({ pageContent, metadata }, index) => `[${index + 1}] (${describeSource(metadata)})\n${pageContent}`)
         .join('\n\n');
 
-    return `Trechos dos documentos da loja:\n\n${context}\n\nPergunta do cliente: ${question}`;
-};
+export const ragPrompt = ChatPromptTemplate.fromMessages([
+    ['system', SYSTEM_INSTRUCTION],
+    new MessagesPlaceholder('history'),
+    ['human', 'Trechos dos documentos da loja:\n\n{context}\n\nPergunta do cliente: {question}'],
+]);

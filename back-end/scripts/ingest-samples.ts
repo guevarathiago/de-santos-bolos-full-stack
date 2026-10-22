@@ -1,7 +1,7 @@
 import { readFile, stat } from 'node:fs/promises';
 import { basename } from 'node:path';
 import { AppDataSource } from '../src/database/data-source.js';
-import { createEmbeddingService } from '../src/modules/ai/embedding.service.js';
+import { GeminiEmbeddings } from '../src/modules/ai/embedding.service.js';
 import { gemini } from '../src/modules/ai/gemini.client.js';
 import { Document } from '../src/modules/documents/document.entity.js';
 import { createDocumentService } from '../src/modules/documents/document.service.js';
@@ -14,7 +14,7 @@ const files = [
 await AppDataSource.initialize();
 
 const documents = AppDataSource.getRepository(Document);
-const service = createDocumentService({ documents, embeddings: createEmbeddingService(gemini.models) });
+const service = createDocumentService({ documents, embeddings: new GeminiEmbeddings(gemini.models) });
 
 for (const { path, mimeType } of files) {
     const filename = basename(path);

@@ -19,6 +19,7 @@ export const createChatRouter = (ragService: RagService) => {
     });
 
     router.post('/', limiter, validateBody(chatMessageSchema), controller.send);
+    router.post('/stream', limiter, validateBody(chatMessageSchema), controller.stream);
 
     return router;
 };

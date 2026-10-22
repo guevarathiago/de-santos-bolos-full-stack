@@ -1,6 +1,6 @@
+import type { EmbeddingsInterface } from '@langchain/core/embeddings';
 import type { Repository } from 'typeorm';
 import { HttpError } from '../../errors/http-error.js';
-import type { EmbeddingService } from '../ai/embedding.service.js';
 import { chunkPages } from './chunker.js';
 import { DocumentChunk } from './document-chunk.entity.js';
 import { Document, DocumentStatus } from './document.entity.js';
@@ -8,7 +8,7 @@ import { extractText, SUPPORTED_MIME_TYPES } from './text-extractor.js';
 
 type DocumentServiceDependencies = {
     documents: Repository<Document>;
-    embeddings: EmbeddingService;
+    embeddings: Pick<EmbeddingsInterface, 'embedDocuments'>;
 };
 
 type NewDocument = {
@@ -31,7 +31,7 @@ export const createDocumentService = ({ documents, embeddings }: DocumentService
         await documents.update(document.id, { status: DocumentStatus.PROCESSING, errorMessage: null });
 
         try {
-            const chunks = chunkPages(await extractText(file, document.mimeType));
+            const chunks = await chunkPages(await extractText(file, document.mimeType));
 
             if (chunks.length === 0) {
                 throw new Error('No text could be extracted from the file');

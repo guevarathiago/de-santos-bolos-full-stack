@@ -1,9 +1,9 @@
 import { env } from '../src/config/env.js';
 import { AppDataSource } from '../src/database/data-source.js';
-import { createEmbeddingService } from '../src/modules/ai/embedding.service.js';
-import { gemini } from '../src/modules/ai/gemini.client.js';
+import { GeminiEmbeddings } from '../src/modules/ai/embedding.service.js';
+import { gemini, geminiChat } from '../src/modules/ai/gemini.client.js';
 import { createRagService } from '../src/modules/rag/rag.service.js';
-import { createRetrievalService } from '../src/modules/rag/retrieval.service.js';
+import { ChunkRetriever } from '../src/modules/rag/retrieval.service.js';
 
 const questions = process.argv.length > 2 ? process.argv.slice(2) : [
     'Vocês entregam em Bertioga?',
@@ -17,12 +17,11 @@ const questions = process.argv.length > 2 ? process.argv.slice(2) : [
 await AppDataSource.initialize();
 
 const rag = createRagService({
-    retrieval: createRetrievalService({
+    retriever: new ChunkRetriever({
         manager: AppDataSource.manager,
-        embeddings: createEmbeddingService(gemini.models),
+        embeddings: new GeminiEmbeddings(gemini.models),
     }),
-    client: gemini.models,
-    model: env.GEMINI_CHAT_MODEL,
+    model: geminiChat,
 });
 
 console.log(`model: ${env.GEMINI_CHAT_MODEL}`);

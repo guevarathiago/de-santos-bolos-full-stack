@@ -1,4 +1,5 @@
 import type { GoogleGenAI } from '@google/genai';
+import { Embeddings } from '@langchain/core/embeddings';
 import { EMBEDDING_DIMENSIONS } from '../documents/document-chunk.entity.js';
 
 export const EMBEDDING_MODEL = 'gemini-embedding-2';
@@ -7,9 +8,17 @@ const BATCH_SIZE = 100;
 
 type EmbeddingClient = Pick<GoogleGenAI['models'], 'embedContent'>;
 
-export const createEmbeddingService = (client: EmbeddingClient) => {
-    const embedBatch = async (texts: string[]) => {
-        const response = await client.embedContent({
+// LangChain's Google packages have no embeddings class on the @google/genai SDK, so this one wraps it.
+export class GeminiEmbeddings extends Embeddings {
+    readonly #client: EmbeddingClient;
+
+    constructor(client: EmbeddingClient) {
+        super({});
+        this.#client = client;
+    }
+
+    async #embedBatch(texts: string[]) {
+        const response = await this.#client.embedContent({
             model: EMBEDDING_MODEL,
             // A plain string array is merged into one input and returns a single embedding.
             contents: texts.map((text) => ({ parts: [{ text }] })),
@@ -27,25 +36,21 @@ export const createEmbeddingService = (client: EmbeddingClient) => {
         }
 
         return vectors;
-    };
+    }
 
-    return {
-        async embedDocuments(texts: string[]) {
-            const vectors: number[][] = [];
+    async embedDocuments(texts: string[]) {
+        const vectors: number[][] = [];
 
-            for (let start = 0; start < texts.length; start += BATCH_SIZE) {
-                vectors.push(...(await embedBatch(texts.slice(start, start + BATCH_SIZE))));
-            }
+        for (let start = 0; start < texts.length; start += BATCH_SIZE) {
+            vectors.push(...(await this.#embedBatch(texts.slice(start, start + BATCH_SIZE))));
+        }
 
-            return vectors;
-        },
+        return vectors;
+    }
 
-        async embedQuery(text: string) {
-            const [vector] = await embedBatch([text]);
+    async embedQuery(text: string) {
+        const [vector] = await this.#embedBatch([text]);
 
-            return vector!;
-        },
-    };
-};
-
-export type EmbeddingService = ReturnType<typeof createEmbeddingService>;
+        return vector!;
+    }
+}

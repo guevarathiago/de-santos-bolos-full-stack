@@ -1,6 +1,6 @@
 import type { Repository } from 'typeorm';
 import { describe, expect, it, vi } from 'vitest';
-import type { EmbeddingService } from '../ai/embedding.service.js';
+import type { EmbeddingsInterface } from '@langchain/core/embeddings';
 import { DocumentChunk } from './document-chunk.entity.js';
 import { Document, DocumentStatus } from './document.entity.js';
 import { createDocumentService } from './document.service.js';
@@ -25,9 +25,10 @@ const makeDocuments = () => {
     return { documents: documents as unknown as Repository<Document>, mocks: { ...documents, manager } };
 };
 
-const makeEmbeddings = (overrides: Partial<EmbeddingService> = {}): EmbeddingService => ({
+type Embeddings = Pick<EmbeddingsInterface, 'embedDocuments'>;
+
+const makeEmbeddings = (overrides: Partial<Embeddings> = {}): Embeddings => ({
     embedDocuments: vi.fn(async (texts: string[]) => texts.map(() => [0.1, 0.2])),
-    embedQuery: vi.fn(),
     ...overrides,
 });
 

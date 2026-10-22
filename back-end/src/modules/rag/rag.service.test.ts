@@ -1,95 +1,100 @@
+import { Document } from '@langchain/core/documents';
+import type { BaseMessage } from '@langchain/core/messages';
+import { FakeListChatModel } from '@langchain/core/utils/testing';
 import { describe, expect, it, vi } from 'vitest';
-import { buildPrompt, SYSTEM_INSTRUCTION } from './prompt.js';
+import { formatContext, SYSTEM_INSTRUCTION } from './prompt.js';
 import { createRagService, NO_CONTEXT_ANSWER } from './rag.service.js';
-import type { RetrievalService, RetrievedChunk } from './retrieval.service.js';
+import type { RetrievedMetadata } from './retrieval.service.js';
 
-const chunk = (overrides: Partial<RetrievedChunk>): RetrievedChunk => ({
-    id: 'chunk',
-    documentId: 'doc-1',
-    filename: 'faq.txt',
-    content: 'texto',
-    metadata: {},
-    similarity: 0.8,
-    ...overrides,
-});
+const chunk = (pageContent: string, metadata: Partial<RetrievedMetadata> = {}) =>
+    new Document<RetrievedMetadata>({
+        pageContent,
+        metadata: { chunkId: 'chunk', documentId: 'doc-1', filename: 'faq.txt', similarity: 0.8, ...metadata },
+    });
 
-const delivery = chunk({
+const delivery = chunk('Entregamos em Bertioga às sextas. Taxa de R$ 30.', {
     documentId: 'doc-pdf',
     filename: 'politicas-entrega.pdf',
-    content: 'Entregamos em Bertioga às sextas. Taxa de R$ 30.',
-    metadata: { page: 1 },
+    page: 1,
 });
-const payment = chunk({ content: 'Parcelamos em até 3 vezes.' });
+const payment = chunk('Parcelamos em até 3 vezes.');
 
-const makeRetrieval = (chunks: RetrievedChunk[]): RetrievalService => ({ search: vi.fn().mockResolvedValue(chunks) });
+const makeRetriever = (documents: Document<RetrievedMetadata>[]) => ({ invoke: vi.fn().mockResolvedValue(documents) });
 
-const makeClient = (text: string | undefined) => ({ generateContent: vi.fn().mockResolvedValue({ text }) });
+const makeModel = (response: string) => {
+    const model = new FakeListChatModel({ responses: [response] });
+    const generate = vi.spyOn(model, '_streamResponseChunks');
 
-describe('buildPrompt', () => {
+    const sentMessages = (): BaseMessage[] => generate.mock.calls[0]?.[0] ?? [];
+
+    return { model, generate, sentMessages };
+};
+
+describe('formatContext', () => {
     it('numbers each chunk and shows its source and page', () => {
-        const prompt = buildPrompt('Entregam em Bertioga?', [delivery, payment]);
+        const context = formatContext([delivery, payment]);
 
-        expect(prompt).toContain('[1] (politicas-entrega.pdf, página 1)\nEntregamos em Bertioga');
-        expect(prompt).toContain('[2] (faq.txt)\nParcelamos');
-        expect(prompt).toContain('Pergunta do cliente: Entregam em Bertioga?');
+        expect(context).toContain('[1] (politicas-entrega.pdf, página 1)\nEntregamos em Bertioga');
+        expect(context).toContain('[2] (faq.txt)\nParcelamos');
     });
 });
 
 describe('ragService.answer', () => {
     it('sends the rules, the chunks and the question to the model', async () => {
-        const client = makeClient('Sim [1].');
+        const { model, sentMessages } = makeModel('Sim [1].');
 
-        await createRagService({ retrieval: makeRetrieval([delivery]), client, model: 'test-model' })
-            .answer('Entregam em Bertioga?');
+        await createRagService({ retriever: makeRetriever([delivery]), model }).answer('Entregam em Bertioga?');
 
-        expect(client.generateContent).toHaveBeenCalledWith({
-            model: 'test-model',
-            contents: [{ role: 'user', parts: [{ text: buildPrompt('Entregam em Bertioga?', [delivery]) }] }],
-            config: { systemInstruction: SYSTEM_INSTRUCTION, temperature: 0.2 },
-        });
+        const [system, human] = sentMessages();
+        expect(system?.getType()).toBe('system');
+        expect(system?.content).toBe(SYSTEM_INSTRUCTION);
+        expect(human?.getType()).toBe('human');
+        expect(human?.content).toBe(
+            `Trechos dos documentos da loja:\n\n${formatContext([delivery])}\n\nPergunta do cliente: Entregam em Bertioga?`,
+        );
     });
 
-    it('sends the previous messages before the new question, as user and model turns', async () => {
-        const client = makeClient('R$ 15 [1].');
+    it('sends the previous messages between the rules and the new question', async () => {
+        const { model, sentMessages } = makeModel('R$ 15 [1].');
         const history = [
             { role: 'user' as const, content: 'Entregam em Bertioga?' },
             { role: 'assistant' as const, content: 'Sim, às sextas.' },
         ];
 
-        await createRagService({ retrieval: makeRetrieval([delivery]), client, model: 'm' })
-            .answer('e no Guarujá?', history);
+        await createRagService({ retriever: makeRetriever([delivery]), model }).answer('e no Guarujá?', history);
 
-        expect(client.generateContent.mock.calls[0]?.[0].contents).toEqual([
-            { role: 'user', parts: [{ text: 'Entregam em Bertioga?' }] },
-            { role: 'model', parts: [{ text: 'Sim, às sextas.' }] },
-            { role: 'user', parts: [{ text: buildPrompt('e no Guarujá?', [delivery]) }] },
+        expect(sentMessages().map((message) => [message.getType(), message.content])).toEqual([
+            ['system', SYSTEM_INSTRUCTION],
+            ['human', 'Entregam em Bertioga?'],
+            ['ai', 'Sim, às sextas.'],
+            ['human', expect.stringContaining('Pergunta do cliente: e no Guarujá?')],
         ]);
     });
 
     it('searches with the previous question so follow-ups find the right chunks', async () => {
-        const retrieval = makeRetrieval([delivery]);
+        const retriever = makeRetriever([delivery]);
         const history = [
             { role: 'user' as const, content: 'Entregam em Bertioga?' },
             { role: 'assistant' as const, content: 'Sim, às sextas.' },
         ];
 
-        await createRagService({ retrieval, client: makeClient('ok'), model: 'm' }).answer('e no Guarujá?', history);
+        await createRagService({ retriever, model: makeModel('ok').model }).answer('e no Guarujá?', history);
 
-        expect(retrieval.search).toHaveBeenCalledWith('Entregam em Bertioga?\ne no Guarujá?');
+        expect(retriever.invoke).toHaveBeenCalledWith('Entregam em Bertioga?\ne no Guarujá?', expect.anything());
     });
 
     it('searches with the question alone when there is no history', async () => {
-        const retrieval = makeRetrieval([delivery]);
+        const retriever = makeRetriever([delivery]);
 
-        await createRagService({ retrieval, client: makeClient('ok'), model: 'm' }).answer('Tem bolo sem glúten?');
+        await createRagService({ retriever, model: makeModel('ok').model }).answer('Tem bolo sem glúten?');
 
-        expect(retrieval.search).toHaveBeenCalledWith('Tem bolo sem glúten?');
+        expect(retriever.invoke).toHaveBeenCalledWith('Tem bolo sem glúten?', expect.anything());
     });
 
     it('returns only the sources cited in the answer, without duplicates', async () => {
-        const client = makeClient('Sim, às sextas [1]. A taxa é R$ 30 [1].');
+        const { model } = makeModel('Sim, às sextas [1]. A taxa é R$ 30 [1].');
 
-        const result = await createRagService({ retrieval: makeRetrieval([delivery, payment]), client, model: 'm' })
+        const result = await createRagService({ retriever: makeRetriever([delivery, payment]), model })
             .answer('Entregam em Bertioga?');
 
         expect(result).toEqual({
@@ -98,32 +103,53 @@ describe('ragService.answer', () => {
         });
     });
 
-    it('does not call the model when no chunk is similar enough', async () => {
-        const client = makeClient('não deveria ser chamado');
+    it('does not call the model when no chunk is relevant', async () => {
+        const { model, generate } = makeModel('não deveria ser chamado');
 
-        const result = await createRagService({
-            retrieval: makeRetrieval([chunk({ similarity: 0.45 })]),
-            client,
-            model: 'm',
-        }).answer('Quem ganhou a Copa de 2002?');
+        const result = await createRagService({ retriever: makeRetriever([]), model }).answer('Quem ganhou a Copa de 2002?');
 
-        expect(client.generateContent).not.toHaveBeenCalled();
+        expect(generate).not.toHaveBeenCalled();
         expect(result).toEqual({ answer: NO_CONTEXT_ANSWER, sources: [] });
-    });
-
-    it('drops weak chunks before building the prompt', async () => {
-        const client = makeClient('Sim [1].');
-        const weak = chunk({ content: 'irrelevante', similarity: 0.3 });
-
-        await createRagService({ retrieval: makeRetrieval([delivery, weak]), client, model: 'm' }).answer('x');
-
-        expect(JSON.stringify(client.generateContent.mock.calls[0]?.[0].contents)).not.toContain('irrelevante');
     });
 
     it('falls back to the default message when the model returns no text', async () => {
-        const result = await createRagService({ retrieval: makeRetrieval([delivery]), client: makeClient(undefined), model: 'm' })
+        const result = await createRagService({ retriever: makeRetriever([delivery]), model: makeModel('  ').model })
             .answer('x');
 
         expect(result).toEqual({ answer: NO_CONTEXT_ANSWER, sources: [] });
+    });
+});
+
+describe('ragService.stream', () => {
+    const collect = async <T>(events: AsyncIterable<T>) => {
+        const collected: T[] = [];
+        for await (const event of events) collected.push(event);
+        return collected;
+    };
+
+    it('sends the answer piece by piece and ends with the full answer and its sources', async () => {
+        const { model } = makeModel('Sim [1].');
+
+        const events = await collect(createRagService({ retriever: makeRetriever([delivery]), model }).stream('x'));
+        const tokens = events.flatMap((event) => (event.type === 'token' ? [event.text] : []));
+
+        expect(tokens.length).toBeGreaterThan(1);
+        expect(tokens.join('')).toBe('Sim [1].');
+        expect(events.at(-1)).toEqual({
+            type: 'done',
+            answer: 'Sim [1].',
+            sources: [{ documentId: 'doc-pdf', filename: 'politicas-entrega.pdf', page: 1 }],
+        });
+    });
+
+    it('sends the default message as a single piece when no chunk is relevant', async () => {
+        const { model } = makeModel('não deveria ser chamado');
+
+        const events = await collect(createRagService({ retriever: makeRetriever([]), model }).stream('x'));
+
+        expect(events).toEqual([
+            { type: 'token', text: NO_CONTEXT_ANSWER },
+            { type: 'done', answer: NO_CONTEXT_ANSWER, sources: [] },
+        ]);
     });
 });

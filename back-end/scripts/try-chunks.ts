@@ -8,7 +8,7 @@ const files = [
 ];
 
 for (const { path, mimeType } of files) {
-    const chunks = chunkPages(await extractText(await readFile(path), mimeType));
+    const chunks = await chunkPages(await extractText(await readFile(path), mimeType));
 
     console.log(`\n=== ${path} → ${chunks.length} chunks ===`);
 

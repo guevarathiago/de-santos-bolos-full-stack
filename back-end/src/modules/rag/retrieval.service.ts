@@ -1,28 +1,59 @@
+import { Document } from '@langchain/core/documents';
+import type { EmbeddingsInterface } from '@langchain/core/embeddings';
+import { BaseRetriever, type BaseRetrieverInput } from '@langchain/core/retrievers';
 import type { EntityManager } from 'typeorm';
-import type { EmbeddingService } from '../ai/embedding.service.js';
 import type { ChunkMetadata } from '../documents/document-chunk.entity.js';
 
-export type RetrievedChunk = {
+export type RetrievedMetadata = ChunkMetadata & {
+    chunkId: string;
+    documentId: string;
+    filename: string;
+    similarity: number;
+};
+
+type ChunkRow = {
     id: string;
     documentId: string;
     filename: string;
     content: string;
     metadata: ChunkMetadata;
-    similarity: number;
+    similarity: string | number;
 };
 
-type RetrievalDependencies = {
+type ChunkRetrieverInput = BaseRetrieverInput & {
     manager: Pick<EntityManager, 'query'>;
-    embeddings: EmbeddingService;
+    embeddings: Pick<EmbeddingsInterface, 'embedQuery'>;
+    k?: number;
+    minSimilarity?: number;
 };
 
-const DEFAULT_LIMIT = 5;
+export const DEFAULT_K = 5;
 
-export const createRetrievalService = ({ manager, embeddings }: RetrievalDependencies) => ({
-    async search(question: string, limit = DEFAULT_LIMIT): Promise<RetrievedChunk[]> {
-        const vector = await embeddings.embedQuery(question);
+export const MIN_SIMILARITY = 0.5;
 
-        const rows: RetrievedChunk[] = await manager.query(
+export class ChunkRetriever extends BaseRetriever<RetrievedMetadata> {
+    lc_namespace = ['de-santos-bolos', 'rag'];
+
+    readonly #manager: ChunkRetrieverInput['manager'];
+
+    readonly #embeddings: ChunkRetrieverInput['embeddings'];
+
+    readonly k: number;
+
+    readonly minSimilarity: number;
+
+    constructor({ manager, embeddings, k = DEFAULT_K, minSimilarity = MIN_SIMILARITY, ...fields }: ChunkRetrieverInput) {
+        super(fields);
+        this.#manager = manager;
+        this.#embeddings = embeddings;
+        this.k = k;
+        this.minSimilarity = minSimilarity;
+    }
+
+    async _getRelevantDocuments(query: string) {
+        const vector = await this.#embeddings.embedQuery(query);
+
+        const rows: ChunkRow[] = await this.#manager.query(
             `SELECT c.id, c."documentId", d.filename, c.content, c.metadata,
                     1 - (c.embedding <=> $1::vector) AS similarity
              FROM "DocumentChunk" c
@@ -30,11 +61,15 @@ export const createRetrievalService = ({ manager, embeddings }: RetrievalDepende
              WHERE d.status = 'READY'
              ORDER BY c.embedding <=> $1::vector
              LIMIT $2`,
-            [`[${vector.join(',')}]`, limit],
+            [`[${vector.join(',')}]`, this.k],
         );
 
-        return rows.map((row) => ({ ...row, similarity: Number(row.similarity) }));
-    },
-});
-
-export type RetrievalService = ReturnType<typeof createRetrievalService>;
+        return rows
+            .map((row) => ({ ...row, similarity: Number(row.similarity) }))
+            .filter((row) => row.similarity >= this.minSimilarity)
+            .map(({ id, documentId, filename, content, metadata, similarity }) => new Document<RetrievedMetadata>({
+                pageContent: content,
+                metadata: { ...metadata, chunkId: id, documentId, filename, similarity },
+            }));
+    }
+}

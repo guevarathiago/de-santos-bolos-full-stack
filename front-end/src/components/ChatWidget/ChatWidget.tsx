@@ -10,7 +10,7 @@ import {
 } from '@heroicons/react/24/outline';
 import { toast } from 'sonner';
 import { useAuth } from '../../hooks/useAuth';
-import { sendChatMessage } from '../../services/chat';
+import { streamChatMessage } from '../../services/chat';
 import type { ChatSource } from '../../services/chat';
 import { getChatErrorMessage } from '../../utils/chatErrors';
 
@@ -23,7 +23,8 @@ const MAX_HISTORY_MESSAGES = 6;
 
 const suggestions = ['Vocês entregam em Bertioga?', 'Tem bolo sem glúten?', 'Posso pagar parcelado?'];
 
-const removeCitations = (text: string) => text.replace(/\s?\[\d+\]/g, '');
+// Also hides a citation still arriving at the end of a streamed answer, like "[1".
+const removeCitations = (text: string) => text.replace(/\s?\[\d+\]/g, '').replace(/\s?\[\d*$/, '');
 
 const describeSource = ({ filename, page }: ChatSource) => (page ? `${filename} · p. ${page}` : filename);
 
@@ -38,6 +39,7 @@ const ChatPanel = () => {
   const [draft, setDraft] = useState('');
   const [isWaiting, setIsWaiting] = useState(false);
   const conversationRef = useRef(0);
+  const abortRef = useRef<AbortController | null>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
 
@@ -61,6 +63,18 @@ const ChatPanel = () => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, isWaiting]);
 
+  useEffect(() => () => abortRef.current?.abort(), []);
+
+  const isThinking = isWaiting && messages.at(-1)?.role === 'user';
+
+  const upsertAssistantMessage = (id: number, text: string, sources: ChatSource[] = []) => {
+    setMessages((current) =>
+      current.some((message) => message.id === id)
+        ? current.map((message) => (message.id === id ? { id, role: 'assistant', text, sources } : message))
+        : [...current, { id, role: 'assistant', text, sources }],
+    );
+  };
+
   const send = async (text: string) => {
     const message = text.trim();
 
@@ -75,23 +89,33 @@ const ChatPanel = () => {
     setDraft('');
     setIsWaiting(true);
 
-    try {
-      const { answer, sources } = await sendChatMessage(message, history);
+    const assistantId = nextId++;
+    const controller = new AbortController();
+    abortRef.current = controller;
 
-      if (conversation === conversationRef.current) {
-        setMessages((current) => [
-          ...current,
-          { id: nextId++, role: 'assistant', text: removeCitations(answer), sources },
-        ]);
-      }
+    try {
+      const { answer, sources } = await streamChatMessage(message, history, {
+        signal: controller.signal,
+        onToken: (partialAnswer) => upsertAssistantMessage(assistantId, removeCitations(partialAnswer)),
+      });
+
+      upsertAssistantMessage(assistantId, removeCitations(answer), sources);
     } catch (err) {
+      if (controller.signal.aborted) {
+        return;
+      }
+
+      setMessages((current) => current.filter((item) => item.id !== assistantId));
       toast.error(getChatErrorMessage(err));
     } finally {
-      setIsWaiting(false);
+      if (conversation === conversationRef.current) {
+        setIsWaiting(false);
+      }
     }
   };
 
   const startNewConversation = () => {
+    abortRef.current?.abort();
     conversationRef.current += 1;
     setMessages([]);
     setDraft('');
@@ -208,7 +232,7 @@ const ChatPanel = () => {
                 </li>
               ),
             )}
-            {isWaiting && (
+            {isThinking && (
               <li className="flex">
                 <p
                   role="status"
