@@ -1,6 +1,7 @@
 import request from 'supertest';
 import { describe, expect, it, vi } from 'vitest';
 import { createApp } from '../../app.js';
+import type { ConversationService } from '../conversations/conversation.service.js';
 import { HttpError } from '../../errors/http-error.js';
 import type { AuthService } from '../auth/auth.service.js';
 import type { RagService } from '../rag/rag.service.js';
@@ -25,7 +26,12 @@ const makeDocumentService = (overrides: Partial<DocumentService> = {}): Document
 });
 
 const makeApp = (documentService = makeDocumentService()) =>
-    createApp({ authService: {} as AuthService, documentService, ragService: {} as RagService });
+    createApp({
+        authService: {} as AuthService,
+        documentService,
+        ragService: {} as RagService,
+        conversationService: {} as ConversationService,
+    });
 
 const as = (user: typeof admin) => [`token=${signToken(user)}`];
 

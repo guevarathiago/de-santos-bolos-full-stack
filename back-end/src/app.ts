@@ -8,15 +8,17 @@ import type { AuthService } from './modules/auth/auth.service.js';
 import { createChatRouter } from './modules/chat/chat.routes.js';
 import { createDocumentRouter } from './modules/documents/document.routes.js';
 import type { DocumentService } from './modules/documents/document.service.js';
+import type { ConversationService } from './modules/conversations/conversation.service.js';
 import type { RagService } from './modules/rag/rag.service.js';
 
 type AppDependencies = {
     authService: AuthService;
     documentService: DocumentService;
     ragService: RagService;
+    conversationService: ConversationService;
 };
 
-export const createApp = ({ authService, documentService, ragService }: AppDependencies) => {
+export const createApp = ({ authService, documentService, ragService, conversationService }: AppDependencies) => {
     const app = express();
 
     app.use(express.json());
@@ -25,7 +27,7 @@ export const createApp = ({ authService, documentService, ragService }: AppDepen
 
     app.use(createAuthRouter(authService));
     app.use('/admin/documents', createDocumentRouter(documentService));
-    app.use('/chat', createChatRouter(ragService));
+    app.use('/chat', createChatRouter({ ragService, conversationService }));
 
     app.use(errorHandler);
 

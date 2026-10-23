@@ -4,6 +4,7 @@ import jwt from 'jsonwebtoken';
 import request from 'supertest';
 import { describe, expect, it, vi } from 'vitest';
 import { createApp } from './app.js';
+import type { ConversationService } from './modules/conversations/conversation.service.js';
 import { HttpError } from './errors/http-error.js';
 import { authenticate } from './middlewares/authenticate.js';
 import { authorize } from './middlewares/authorize.js';
@@ -23,7 +24,12 @@ const makeAuthService = (overrides: Partial<AuthService> = {}): AuthService => (
 });
 
 const makeApp = (authService = makeAuthService()) =>
-    createApp({ authService, documentService: {} as DocumentService, ragService: {} as RagService });
+    createApp({
+        authService,
+        documentService: {} as DocumentService,
+        ragService: {} as RagService,
+        conversationService: {} as ConversationService,
+    });
 
 const tokenCookie = (token: string) => [`token=${token}`];
 

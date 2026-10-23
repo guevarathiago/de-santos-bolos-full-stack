@@ -1,3 +1,5 @@
+import { api } from './api';
+
 export type ChatSource = {
   documentId: string;
   filename: string;
@@ -14,12 +16,26 @@ export type ChatReply = {
   sources: ChatSource[];
 };
 
+export type SavedChatMessage = ChatHistoryMessage & {
+  sources: ChatSource[];
+};
+
+export type SavedConversation = {
+  id: string;
+  messages: SavedChatMessage[];
+};
+
 type ChatStreamEvent =
+  | { type: 'conversation'; conversationId: string }
   | { type: 'token'; text: string }
   | ({ type: 'done' } & ChatReply)
   | { type: 'error'; message: string };
 
+// Visitors send the recent history; logged-in users send only the conversation id and the server loads the rest.
 type StreamOptions = {
+  history: ChatHistoryMessage[];
+  conversationId?: string;
+  onConversation: (conversationId: string) => void;
   onToken: (partialAnswer: string) => void;
   signal: AbortSignal;
 };
@@ -38,15 +54,21 @@ export class ChatStreamError extends Error {
 const parseEvent = (raw: string): ChatStreamEvent | null =>
   raw.startsWith('data: ') ? (JSON.parse(raw.slice('data: '.length)) as ChatStreamEvent) : null;
 
+export const getLatestConversation = async () => {
+  const { data } = await api.get<{ conversation: SavedConversation | null }>('/chat/conversations/latest');
+  return data.conversation;
+};
+
 export const streamChatMessage = async (
   message: string,
-  history: ChatHistoryMessage[],
-  { onToken, signal }: StreamOptions,
+  { history, conversationId, onConversation, onToken, signal }: StreamOptions,
 ): Promise<ChatReply> => {
   const response = await fetch(`${import.meta.env.VITE_API_URL}/chat/stream`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ message, history }),
+    body: JSON.stringify({ message, history, conversationId }),
+    // Sends the login cookie to the API, which runs on another origin.
+    credentials: 'include',
     signal: AbortSignal.any([signal, AbortSignal.timeout(CHAT_TIMEOUT_MS)]),
   });
 
@@ -72,6 +94,10 @@ export const streamChatMessage = async (
     buffer = rawEvents.pop() ?? '';
 
     for (const event of rawEvents.map(parseEvent)) {
+      if (event?.type === 'conversation') {
+        onConversation(event.conversationId);
+      }
+
       if (event?.type === 'token') {
         answer += event.text;
         onToken(answer);

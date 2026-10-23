@@ -1,6 +1,7 @@
 import { Document } from '@langchain/core/documents';
 import type { BaseMessage } from '@langchain/core/messages';
 import { FakeListChatModel } from '@langchain/core/utils/testing';
+import { MemorySaver } from '@langchain/langgraph';
 import { describe, expect, it, vi } from 'vitest';
 import { formatContext, SYSTEM_INSTRUCTION } from './prompt.js';
 import { createRagService, NO_CONTEXT_ANSWER } from './rag.service.js';
@@ -61,7 +62,7 @@ describe('ragService.answer', () => {
             { role: 'assistant' as const, content: 'Sim, às sextas.' },
         ];
 
-        await createRagService({ retriever: makeRetriever([delivery]), model }).answer('e no Guarujá?', history);
+        await createRagService({ retriever: makeRetriever([delivery]), model }).answer('e no Guarujá?', { history });
 
         expect(sentMessages().map((message) => [message.getType(), message.content])).toEqual([
             ['system', SYSTEM_INSTRUCTION],
@@ -78,7 +79,7 @@ describe('ragService.answer', () => {
             { role: 'assistant' as const, content: 'Sim, às sextas.' },
         ];
 
-        await createRagService({ retriever, model: makeModel('ok').model }).answer('e no Guarujá?', history);
+        await createRagService({ retriever, model: makeModel('ok').model }).answer('e no Guarujá?', { history });
 
         expect(retriever.invoke).toHaveBeenCalledWith('Entregam em Bertioga?\ne no Guarujá?', expect.anything());
     });
@@ -151,5 +152,70 @@ describe('ragService.stream', () => {
             { type: 'token', text: NO_CONTEXT_ANSWER },
             { type: 'done', answer: NO_CONTEXT_ANSWER, sources: [] },
         ]);
+    });
+});
+
+describe('ragService with a checkpointer (logged-in conversations)', () => {
+    const makeMemoryService = (responses: string[]) => {
+        const model = new FakeListChatModel({ responses });
+        const generate = vi.spyOn(model, '_streamResponseChunks');
+        const retriever = makeRetriever([delivery]);
+        const service = createRagService({ retriever, model, checkpointer: new MemorySaver() });
+
+        const sentMessagesOfCall = (call: number) =>
+            (generate.mock.calls[call]?.[0] ?? []).map((message) => [message.getType(), message.content]);
+
+        return { service, retriever, sentMessagesOfCall };
+    };
+
+    it('remembers the previous messages of the same thread without the caller sending them', async () => {
+        const { service, retriever, sentMessagesOfCall } = makeMemoryService(['Sim, às sextas [1].', 'Até as 12h [1].']);
+
+        await service.answer('Entregam em Bertioga?', { threadId: 'thread-1' });
+        await service.answer('e aos domingos?', { threadId: 'thread-1' });
+
+        expect(sentMessagesOfCall(1)).toEqual([
+            ['system', SYSTEM_INSTRUCTION],
+            ['human', 'Entregam em Bertioga?'],
+            ['ai', 'Sim, às sextas [1].'],
+            ['human', expect.stringContaining('Pergunta do cliente: e aos domingos?')],
+        ]);
+        expect(retriever.invoke).toHaveBeenLastCalledWith('Entregam em Bertioga?\ne aos domingos?', expect.anything());
+    });
+
+    it('keeps different threads apart', async () => {
+        const { service, sentMessagesOfCall } = makeMemoryService(['Sim [1].']);
+
+        await service.answer('Entregam em Bertioga?', { threadId: 'thread-1' });
+        await service.answer('Tem bolo sem glúten?', { threadId: 'thread-2' });
+
+        expect(sentMessagesOfCall(1).map(([type]) => type)).toEqual(['system', 'human']);
+    });
+
+    it('returns the saved messages of a thread with the sources of each answer', async () => {
+        const { service } = makeMemoryService(['Sim, às sextas [1].']);
+
+        await service.answer('Entregam em Bertioga?', { threadId: 'thread-1' });
+
+        expect(await service.history('thread-1')).toEqual([
+            { role: 'user', content: 'Entregam em Bertioga?', sources: [] },
+            {
+                role: 'assistant',
+                content: 'Sim, às sextas [1].',
+                sources: [{ documentId: 'doc-pdf', filename: 'politicas-entrega.pdf', page: 1 }],
+            },
+        ]);
+    });
+
+    it('returns an empty history for a thread that never ran', async () => {
+        const { service } = makeMemoryService(['ok']);
+
+        expect(await service.history('unknown')).toEqual([]);
+    });
+
+    it('refuses threads when no checkpointer was given', async () => {
+        const service = createRagService({ retriever: makeRetriever([delivery]), model: makeModel('ok').model });
+
+        await expect(service.answer('Oi', { threadId: 'thread-1' })).rejects.toThrow('Conversations need a checkpointer');
     });
 });

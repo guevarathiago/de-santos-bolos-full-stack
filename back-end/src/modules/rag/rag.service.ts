@@ -1,115 +1,112 @@
-import type { DocumentInterface } from '@langchain/core/documents';
 import type { BaseChatModel } from '@langchain/core/language_models/chat_models';
-import { AIMessage, HumanMessage } from '@langchain/core/messages';
-import { StringOutputParser } from '@langchain/core/output_parsers';
+import { AIMessage, AIMessageChunk, type BaseMessage, HumanMessage } from '@langchain/core/messages';
 import type { BaseRetrieverInterface } from '@langchain/core/retrievers';
-import { formatContext, ragPrompt } from './prompt.js';
+import type { BaseCheckpointSaver } from '@langchain/langgraph';
+import { buildRagGraph, sourcesOf, type Source } from './rag.graph.js';
 import type { RetrievedMetadata } from './retrieval.service.js';
 
-export const NO_CONTEXT_ANSWER =
-    'Não encontrei essa informação nos documentos da loja. Para ajudar melhor, fale com a gente pelo WhatsApp.';
-
-export type Source = {
-    documentId: string;
-    filename: string;
-    page?: number;
-};
+export { NO_CONTEXT_ANSWER, type Source } from './rag.graph.js';
 
 export type HistoryMessage = {
     role: 'user' | 'assistant';
     content: string;
 };
 
+export type SavedMessage = HistoryMessage & {
+    sources: Source[];
+};
+
 export type RagStreamEvent =
     | { type: 'token'; text: string }
     | { type: 'done'; answer: string; sources: Source[] };
 
-type StreamOptions = {
+// A visitor sends the recent history; a logged-in user sends the threadId and the graph loads the rest.
+type AskOptions = {
+    history?: HistoryMessage[];
+    threadId?: string;
     signal?: AbortSignal;
 };
-
-type RetrievedDocument = DocumentInterface<RetrievedMetadata>;
 
 type RagDependencies = {
     retriever: Pick<BaseRetrieverInterface<RetrievedMetadata>, 'invoke'>;
     model: BaseChatModel;
-};
-
-const citedSources = (answer: string, documents: RetrievedDocument[]): Source[] => {
-    const cited = new Set([...answer.matchAll(/\[(\d+)\]/g)].map((match) => Number(match[1])));
-    const sources = new Map<string, Source>();
-
-    documents.forEach(({ metadata: { documentId, filename, page } }, index) => {
-        if (!cited.has(index + 1)) return;
-
-        const key = `${documentId}:${page ?? ''}`;
-        sources.set(key, page ? { documentId, filename, page } : { documentId, filename });
-    });
-
-    return [...sources.values()];
-};
-
-const searchQuery = (question: string, history: HistoryMessage[]) => {
-    const previousQuestion = history.findLast((message) => message.role === 'user');
-
-    return previousQuestion ? `${previousQuestion.content}\n${question}` : question;
+    checkpointer?: BaseCheckpointSaver;
 };
 
 const toMessages = (history: HistoryMessage[]) =>
     history.map(({ role, content }) => (role === 'assistant' ? new AIMessage(content) : new HumanMessage(content)));
 
-export const createRagService = ({ retriever, model }: RagDependencies) => {
-    const chain = ragPrompt.pipe(model).pipe(new StringOutputParser());
+const threadConfig = (threadId: string) => ({ configurable: { thread_id: threadId } });
 
-    async function* stream(
-        question: string,
-        history: HistoryMessage[] = [],
-        options: StreamOptions = {},
-    ): AsyncGenerator<RagStreamEvent> {
-        const documents = await retriever.invoke(searchQuery(question, history), options);
+export const createRagService = ({ retriever, model, checkpointer }: RagDependencies) => {
+    const visitorGraph = buildRagGraph({ retriever, model });
+    const memoryGraph = checkpointer ? buildRagGraph({ retriever, model, checkpointer }) : undefined;
 
-        if (documents.length === 0) {
-            yield { type: 'token', text: NO_CONTEXT_ANSWER };
-            yield { type: 'done', answer: NO_CONTEXT_ANSWER, sources: [] };
-            return;
+    const requireMemoryGraph = () => {
+        if (!memoryGraph) {
+            throw new Error('Conversations need a checkpointer');
         }
 
-        const tokens = await chain.stream(
-            { history: toMessages(history), context: formatContext(documents), question },
-            options,
-        );
+        return memoryGraph;
+    };
 
-        let response = '';
+    async function* stream(question: string, { history = [], threadId, signal }: AskOptions = {}): AsyncGenerator<RagStreamEvent> {
+        const newMessage = new HumanMessage(question);
+        const runConfig = { ...(signal ? { signal } : {}), streamMode: ['messages', 'values'] as ('messages' | 'values')[] };
+        const run = threadId
+            ? requireMemoryGraph().stream({ messages: [newMessage] }, { ...threadConfig(threadId), ...runConfig })
+            : visitorGraph.stream({ messages: [...toMessages(history), newMessage] }, runConfig);
 
-        for await (const text of tokens) {
-            if (!text) continue;
+        let streamed = '';
+        let finalMessages: BaseMessage[] = [];
 
-            response += text;
-            yield { type: 'token', text };
+        for await (const [mode, chunk] of await run) {
+            if (mode === 'values') {
+                finalMessages = chunk.messages;
+                continue;
+            }
+
+            const [message, metadata] = chunk;
+
+            // Only the pieces the model writes in the "generate" node go out; the node's final message would repeat them.
+            if (metadata.langgraph_node === 'generate' && AIMessageChunk.isInstance(message) && message.text) {
+                streamed += message.text;
+                yield { type: 'token', text: message.text };
+            }
         }
 
-        const answer = response.trim();
+        const reply = finalMessages.at(-1);
+        const answer = reply?.text ?? '';
 
-        if (!answer) {
-            yield { type: 'token', text: NO_CONTEXT_ANSWER };
-            yield { type: 'done', answer: NO_CONTEXT_ANSWER, sources: [] };
-            return;
+        // The no-context answer is not written by the model, so it is sent in one piece.
+        if (!streamed.trim()) {
+            yield { type: 'token', text: answer };
         }
 
-        yield { type: 'done', answer, sources: citedSources(answer, documents) };
+        yield { type: 'done', answer, sources: reply ? sourcesOf(reply) : [] };
     }
 
     return {
         stream,
 
-        async answer(question: string, history: HistoryMessage[] = []) {
-            for await (const event of stream(question, history)) {
+        async answer(question: string, options: AskOptions = {}) {
+            for await (const event of stream(question, options)) {
                 if (event.type === 'done') {
                     return { answer: event.answer, sources: event.sources };
                 }
             }
 
             throw new Error('The answer stream ended without a final event');
+        },
+
+        async history(threadId: string): Promise<SavedMessage[]> {
+            const { values } = await requireMemoryGraph().getState(threadConfig(threadId));
+            const messages: BaseMessage[] = values.messages ?? [];
+
+            return messages.map((message) =>
+                message.getType() === 'human'
+                    ? { role: 'user', content: message.text, sources: [] }
+                    : { role: 'assistant', content: message.text, sources: sourcesOf(message) });
         },
     };
 };

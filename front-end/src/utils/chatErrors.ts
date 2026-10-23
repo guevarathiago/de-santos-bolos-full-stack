@@ -2,6 +2,7 @@ import { ChatStreamError } from '../services/chat';
 
 const statusMessages: Record<number, string> = {
   400: 'Escreva uma mensagem de até 1000 caracteres.',
+  404: 'Não encontramos essa conversa. Envie sua mensagem novamente para começar outra.',
   429: 'Muitas perguntas seguidas. Aguarde um minuto e tente novamente.',
   500: 'O assistente está indisponível agora. Tente novamente em instantes.',
 };

@@ -13,6 +13,7 @@ export const chatMessageSchema = z.object({
         }))
         .max(MAX_HISTORY_MESSAGES)
         .default([]),
+    conversationId: z.uuid().optional(),
 });
 
 export type ChatMessageInput = z.infer<typeof chatMessageSchema>;

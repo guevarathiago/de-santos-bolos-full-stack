@@ -10,8 +10,8 @@ import {
 } from '@heroicons/react/24/outline';
 import { toast } from 'sonner';
 import { useAuth } from '../../hooks/useAuth';
-import { streamChatMessage } from '../../services/chat';
-import type { ChatSource } from '../../services/chat';
+import { ChatStreamError, getLatestConversation, streamChatMessage } from '../../services/chat';
+import type { ChatSource, SavedChatMessage } from '../../services/chat';
 import { getChatErrorMessage } from '../../utils/chatErrors';
 
 type ChatMessage =
@@ -33,12 +33,21 @@ const headerButtonClass =
 
 let nextId = 0;
 
-const ChatPanel = () => {
+const toChatMessage = ({ role, content, sources }: SavedChatMessage): ChatMessage =>
+  role === 'user'
+    ? { id: nextId++, role, text: content }
+    : { id: nextId++, role, text: removeCitations(content), sources };
+
+const ChatPanel = ({ isLoggedIn }: { isLoggedIn: boolean }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [draft, setDraft] = useState('');
   const [isWaiting, setIsWaiting] = useState(false);
+  const [isLoadingHistory, setIsLoadingHistory] = useState(false);
   const conversationRef = useRef(0);
+  // Id of the saved conversation on the server; logged-in users only.
+  const conversationIdRef = useRef<string | undefined>(undefined);
+  const historyRequestedRef = useRef(false);
   const abortRef = useRef<AbortController | null>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -75,15 +84,46 @@ const ChatPanel = () => {
     );
   };
 
+  // Loads the latest saved conversation the first time a logged-in user opens the chat.
+  const loadHistory = async () => {
+    const conversation = conversationRef.current;
+    historyRequestedRef.current = true;
+    setIsLoadingHistory(true);
+
+    try {
+      const saved = await getLatestConversation();
+
+      if (saved && conversation === conversationRef.current) {
+        conversationIdRef.current = saved.id;
+        setMessages(saved.messages.map(toChatMessage));
+      }
+    } catch {
+      toast.error('Não foi possível carregar sua conversa anterior.');
+    } finally {
+      setIsLoadingHistory(false);
+    }
+  };
+
+  const open = () => {
+    setIsOpen(true);
+
+    if (isLoggedIn && !historyRequestedRef.current) {
+      loadHistory();
+    }
+  };
+
   const send = async (text: string) => {
     const message = text.trim();
 
-    if (!message || isWaiting) {
+    if (!message || isWaiting || isLoadingHistory) {
       return;
     }
 
     const conversation = conversationRef.current;
-    const history = messages.slice(-MAX_HISTORY_MESSAGES).map(({ role, text: content }) => ({ role, content }));
+    // Logged-in users have the history on the server, so only visitors send it.
+    const history = isLoggedIn
+      ? []
+      : messages.slice(-MAX_HISTORY_MESSAGES).map(({ role, text: content }) => ({ role, content }));
 
     setMessages((current) => [...current, { id: nextId++, role: 'user', text: message }]);
     setDraft('');
@@ -94,8 +134,13 @@ const ChatPanel = () => {
     abortRef.current = controller;
 
     try {
-      const { answer, sources } = await streamChatMessage(message, history, {
+      const { answer, sources } = await streamChatMessage(message, {
+        history,
+        conversationId: conversationIdRef.current,
         signal: controller.signal,
+        onConversation: (conversationId) => {
+          conversationIdRef.current = conversationId;
+        },
         onToken: (partialAnswer) => upsertAssistantMessage(assistantId, removeCitations(partialAnswer)),
       });
 
@@ -103,6 +148,11 @@ const ChatPanel = () => {
     } catch (err) {
       if (controller.signal.aborted) {
         return;
+      }
+
+      // The saved conversation is gone; the next message starts a new one.
+      if (err instanceof ChatStreamError && err.status === 404) {
+        conversationIdRef.current = undefined;
       }
 
       setMessages((current) => current.filter((item) => item.id !== assistantId));
@@ -117,6 +167,7 @@ const ChatPanel = () => {
   const startNewConversation = () => {
     abortRef.current?.abort();
     conversationRef.current += 1;
+    conversationIdRef.current = undefined;
     setMessages([]);
     setDraft('');
     setIsWaiting(false);
@@ -139,7 +190,7 @@ const ChatPanel = () => {
     return (
       <button
         type="button"
-        onClick={() => setIsOpen(true)}
+        onClick={open}
         aria-label="Abrir assistente"
         title="Assistente"
         className="fixed right-4 bottom-20 z-40 flex h-14 w-14 cursor-pointer items-center justify-center rounded-full bg-brand text-text-strong shadow-lg shadow-black/40 transition-transform hover:scale-110 hover:bg-brand-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-accent focus-visible:ring-offset-2 focus-visible:ring-offset-surface active:scale-95 sm:right-6 sm:bottom-24"
@@ -185,7 +236,11 @@ const ChatPanel = () => {
       </header>
 
       <div className="flex-1 overflow-y-auto px-4 py-4">
-        {messages.length === 0 ? (
+        {isLoadingHistory ? (
+          <p role="status" className="flex h-full animate-pulse items-center justify-center text-sm text-text-muted">
+            Carregando sua conversa...
+          </p>
+        ) : messages.length === 0 ? (
           <div className="flex h-full flex-col items-center justify-center gap-2 text-center">
             <p className="text-sm font-medium text-text-strong">Olá! Como posso ajudar?</p>
             <p className="text-xs text-text-muted">Escolha uma sugestão ou escreva sua pergunta.</p>
@@ -261,12 +316,12 @@ const ChatPanel = () => {
             placeholder="Digite sua pergunta..."
             rows={1}
             maxLength={MAX_MESSAGE_LENGTH}
-            disabled={isWaiting}
+            disabled={isWaiting || isLoadingHistory}
             className="max-h-32 min-h-10 flex-1 resize-none rounded-md border border-input-border bg-input px-3 py-2 text-sm text-text-strong placeholder-text-muted focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand disabled:cursor-not-allowed disabled:opacity-60"
           />
           <button
             type="submit"
-            disabled={isWaiting || !draft.trim()}
+            disabled={isWaiting || isLoadingHistory || !draft.trim()}
             aria-label="Enviar"
             title="Enviar"
             className="flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-md bg-brand text-text-strong transition-colors hover:bg-brand-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-accent disabled:cursor-not-allowed disabled:opacity-50"
@@ -286,7 +341,7 @@ const ChatWidget = () => {
     return null;
   }
 
-  return <ChatPanel key={user?.id ?? 'guest'} />;
+  return <ChatPanel key={user?.id ?? 'guest'} isLoggedIn={user !== null} />;
 };
 
 export default ChatWidget;
