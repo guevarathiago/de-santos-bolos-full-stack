@@ -1,6 +1,5 @@
 import {
   BookOpenIcon,
-  CakeIcon,
   ClockIcon,
   MapPinIcon,
   PhoneIcon,
@@ -8,24 +7,32 @@ import {
   TruckIcon,
 } from '@heroicons/react/24/outline';
 import { Link } from 'react-router';
-import logoRedondo from '../assets/logoRedondo.png';
+import bannerHome from '../assets/banner-home.webp';
+import boloChurros from '../assets/bolo-churros.webp';
+import boloCocoQueimado from '../assets/bolo-coco-queimado.webp';
+import boloMatilda from '../assets/bolo-matilda.webp';
 import { WHATSAPP_DISPLAY } from '../constants/contact';
+import { formatPrice } from '../constants/products';
 
+// Prices per slice; reference values until the store confirms them.
 const highlights = [
   {
     name: 'Bolo Matilda',
-    description: 'Chocolate intenso e úmido, coberto com uma ganache cremosa.',
-    price: 'R$ 00,00',
+    description: 'Massa de chocolate úmida, recheio cremoso de chocolate e ganache brilhante com raspas por cima.',
+    priceCents: 1490,
+    image: boloMatilda,
   },
   {
     name: 'Bolo Churros',
-    description: 'Massa com canela e açúcar, recheada com doce de leite.',
-    price: 'R$ 00,00',
+    description: 'Massa fofinha com canela e açúcar, camadas de doce de leite e pedacinhos de churros na cobertura.',
+    priceCents: 1590,
+    image: boloChurros,
   },
   {
     name: 'Bolo de Coco Queimado',
-    description: 'Massa fofinha com cobertura de coco caramelizado.',
-    price: 'R$ 00,00',
+    description: 'Massa leve com recheio cremoso de coco e cobertura de coco queimado crocante.',
+    priceCents: 1490,
+    image: boloCocoQueimado,
   },
 ];
 
@@ -54,7 +61,7 @@ const contacts = [
 ];
 
 const primaryButtonClass =
-  'rounded-md bg-brand px-5 py-2.5 text-sm font-semibold text-text-strong transition-colors hover:bg-brand-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-accent';
+  'rounded-md bg-brand px-5 py-2.5 text-sm font-semibold text-on-brand transition-colors hover:bg-brand-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-accent';
 
 const secondaryButtonClass =
   'rounded-md border border-surface-border px-5 py-2.5 text-sm font-semibold text-text transition-colors hover:border-brand hover:bg-surface-elevated hover:text-text-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand';
@@ -62,33 +69,39 @@ const secondaryButtonClass =
 const Home = () => {
   return (
     <div className="flex flex-col">
-      <section className="mx-auto grid w-full max-w-7xl items-center gap-10 px-4 py-16 sm:px-6 md:grid-cols-2 md:py-24 lg:px-8">
-        <div className="flex flex-col items-center gap-6 text-center md:items-start md:text-left">
-          <span className="text-sm font-semibold uppercase tracking-widest text-brand-accent">
-            Bolos caseiros em Santos
-          </span>
-          <h1 className="text-4xl font-bold leading-tight text-text-strong sm:text-5xl">
-            Feitos com carinho, do jeito que bolo tem que ser.
-          </h1>
-          <p className="max-w-md text-text-muted">
-            Receitas tradicionais, ingredientes selecionados e aquele sabor de casa de vó. Escolha o seu e
-            peça agora mesmo.
-          </p>
-          <div className="flex flex-wrap justify-center gap-3 md:justify-start">
-            <Link to="/cardapio" className={primaryButtonClass}>
-              Ver cardápio
-            </Link>
-            <a href="#como-funciona" className={secondaryButtonClass}>
-              Como funciona
-            </a>
+      <section className="relative isolate overflow-hidden">
+        <img
+          src={bannerHome}
+          alt=""
+          fetchPriority="high"
+          className="absolute inset-0 -z-10 h-full w-full object-cover object-right"
+        />
+        {/* The photo leaves the left side empty for the text; the fade keeps it readable where the cakes reach. */}
+        <div
+          aria-hidden="true"
+          className="absolute inset-0 -z-10 bg-surface/75 md:bg-transparent md:bg-linear-to-r md:from-surface/90 md:via-surface/50 md:to-transparent"
+        />
+        <div className="mx-auto flex min-h-128 w-full max-w-7xl items-center px-4 py-16 sm:px-6 md:min-h-152 md:py-24 lg:px-8">
+          <div className="flex max-w-xl flex-col items-center gap-6 text-center md:items-start md:text-left">
+            <span className="text-sm font-semibold uppercase tracking-widest text-brand-accent">
+              Bolos caseiros em Santos
+            </span>
+            <h1 className="text-4xl font-bold leading-tight text-text-strong sm:text-5xl">
+              Feitos com carinho, do jeito que bolo tem que ser.
+            </h1>
+            <p className="max-w-md text-text-muted">
+              Receitas tradicionais, ingredientes selecionados e aquele sabor de casa de vó. Escolha o seu e
+              peça agora mesmo.
+            </p>
+            <div className="flex flex-wrap justify-center gap-3 md:justify-start">
+              <Link to="/cardapio" className={primaryButtonClass}>
+                Ver cardápio
+              </Link>
+              <a href="#como-funciona" className={secondaryButtonClass}>
+                Como funciona
+              </a>
+            </div>
           </div>
-        </div>
-        <div className="flex justify-center">
-          <img
-            src={logoRedondo}
-            alt=""
-            className="w-56 drop-shadow-[0_0_60px_rgba(163,92,54,0.35)] sm:w-72 lg:w-80"
-          />
         </div>
       </section>
 
@@ -104,13 +117,21 @@ const Home = () => {
                 key={item.name}
                 className="flex flex-col overflow-hidden rounded-lg border border-surface-border bg-surface-elevated"
               >
-                <div className="flex aspect-4/3 items-center justify-center bg-surface">
-                  <CakeIcon className="h-16 w-16 text-brand" aria-hidden="true" />
+                <div className="aspect-4/3 overflow-hidden bg-surface">
+                  <img
+                    src={item.image}
+                    alt={item.name}
+                    loading="lazy"
+                    className="h-full w-full object-cover transition-transform duration-500 hover:scale-105"
+                  />
                 </div>
                 <div className="flex flex-1 flex-col gap-2 p-5">
                   <h3 className="text-lg font-semibold text-text-strong">{item.name}</h3>
                   <p className="flex-1 text-sm text-text-muted">{item.description}</p>
-                  <span className="font-semibold text-brand-accent">{item.price}</span>
+                  <p className="font-semibold text-brand-accent">
+                    {formatPrice(item.priceCents)}
+                    <span className="ml-1 text-xs font-normal text-text-muted">a fatia</span>
+                  </p>
                 </div>
               </li>
             ))}

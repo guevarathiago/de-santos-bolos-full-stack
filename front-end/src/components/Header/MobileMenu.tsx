@@ -3,17 +3,13 @@ import {
   ArrowRightStartOnRectangleIcon,
   Bars3Icon,
   BookOpenIcon,
+  CakeIcon,
   ClipboardDocumentListIcon,
   DocumentTextIcon,
-  PlusIcon,
   XMarkIcon,
 } from '@heroicons/react/24/outline';
 import { NavLink } from 'react-router';
 import { useAuth } from '../../hooks/useAuth';
-
-type MobileMenuProps = {
-  onAdd: () => void;
-};
 
 const itemBaseClass =
   'flex w-full cursor-pointer items-center gap-3 rounded-md px-3 py-2.5 text-sm font-medium transition-colors hover:bg-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand';
@@ -23,7 +19,7 @@ const itemClass = `${itemBaseClass} text-text hover:text-text-strong`;
 const navItemClass = ({ isActive }: { isActive: boolean }) =>
   isActive ? `${itemBaseClass} bg-surface text-brand-accent` : itemClass;
 
-const MobileMenu = ({ onAdd }: MobileMenuProps) => {
+const MobileMenu = () => {
   const { user, logout } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -64,7 +60,7 @@ const MobileMenu = ({ onAdd }: MobileMenuProps) => {
         aria-label={isOpen ? 'Fechar menu' : 'Abrir menu'}
         aria-expanded={isOpen}
         aria-controls="mobile-menu"
-        className="flex cursor-pointer items-center justify-center rounded-md p-2 text-text transition-colors hover:bg-surface-elevated hover:text-text-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+        className="flex cursor-pointer items-center justify-center rounded-md p-2 text-on-brand transition-colors hover:bg-brand-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-on-brand"
       >
         {isOpen ? (
           <XMarkIcon className="h-6 w-6" aria-hidden="true" />
@@ -96,24 +92,19 @@ const MobileMenu = ({ onAdd }: MobileMenuProps) => {
                 Pedidos
               </NavLink>
             </li>
-            <li>
-              <button
-                type="button"
-                onClick={() => {
-                  close();
-                  onAdd();
-                }}
-                className={itemClass}
-              >
-                <PlusIcon className="h-5 w-5" aria-hidden="true" />
-                Adicionar
-              </button>
-            </li>
             {user?.role === 'ADMIN' && (
               <li>
                 <NavLink to="/admin/documentos" onClick={close} className={navItemClass}>
                   <DocumentTextIcon className="h-5 w-5" aria-hidden="true" />
                   Base de conhecimento
+                </NavLink>
+              </li>
+            )}
+            {user?.role === 'ADMIN' && (
+              <li>
+                <NavLink to="/admin/produtos" onClick={close} className={navItemClass}>
+                  <CakeIcon className="h-5 w-5" aria-hidden="true" />
+                  Produtos
                 </NavLink>
               </li>
             )}

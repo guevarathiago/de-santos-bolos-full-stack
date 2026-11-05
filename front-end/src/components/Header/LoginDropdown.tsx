@@ -68,7 +68,7 @@ const LoginDropdown = () => {
         disabled={isLoading}
         aria-haspopup="menu"
         aria-expanded={isOpen}
-        className="flex items-center gap-1.5 text-sm font-medium text-text transition-colors hover:text-text-strong disabled:cursor-not-allowed disabled:opacity-60"
+        className="flex items-center gap-1.5 text-sm font-medium text-on-brand transition-colors hover:text-on-brand/80 disabled:cursor-not-allowed disabled:opacity-60"
       >
         <UserIcon className="h-5 w-5" aria-hidden="true" />
         Entrar
@@ -122,7 +122,7 @@ const LoginDropdown = () => {
             <button
               type="submit"
               disabled={isLoading}
-              className="mt-1 w-full rounded-md bg-brand py-2 text-sm font-semibold text-text-strong transition-colors hover:bg-brand-hover disabled:cursor-not-allowed disabled:opacity-60"
+              className="mt-1 w-full rounded-md bg-brand py-2 text-sm font-semibold text-on-brand transition-colors hover:bg-brand-hover disabled:cursor-not-allowed disabled:opacity-60"
             >
               {isLoading ? 'Entrando...' : 'Entrar'}
             </button>

@@ -7,7 +7,7 @@ const NotFound = () => {
       <p className="text-sm text-text-muted">O endereço que você acessou não existe.</p>
       <Link
         to="/"
-        className="rounded-md bg-brand px-4 py-2 text-sm font-semibold text-text-strong transition-colors hover:bg-brand-hover"
+        className="rounded-md bg-brand px-4 py-2 text-sm font-semibold text-on-brand transition-colors hover:bg-brand-hover"
       >
         Voltar para o início
       </Link>

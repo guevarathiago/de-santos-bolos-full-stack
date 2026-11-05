@@ -1,33 +1,38 @@
 @import 'tailwindcss';
 
+/* Warm light theme built from a single hue: every color is the brand brown (#a35c36, hue 21°) made lighter or darker. */
 @theme {
   /* Backgrounds */
-  --color-surface: #090a0c;
-  --color-surface-elevated: #18191d;
-  --color-surface-border: #2f3035;
+  --color-surface: #f4e4dc;
+  --color-surface-elevated: #fcf4f1;
+  --color-surface-border: #e2c9bb;
 
   /* Inputs */
-  --color-input: #27282c;
-  --color-input-border: #3a3b40;
+  --color-input: #fefaf8;
+  --color-input-border: #d3b6a6;
 
   /* Text */
-  --color-text: #e4e4e7;
-  --color-text-strong: #f5f5f5;
-  --color-text-muted: #a7a7af;
+  --color-text: #51301f;
+  --color-text-strong: #361e12;
+  --color-text-muted: #79533e;
 
   /* Brand */
   --color-brand: #a35c36;
-  --color-brand-hover: #b8673e;
+  --color-brand-hover: #864c2c;
 
-  --color-brand-accent: #c9794d;
-  --color-brand-accent-hover: #d98252;
+  /* Highlights use the brand color itself. */
+  --color-brand-accent: #a35c36;
+  --color-brand-accent-hover: #864c2c;
+
+  /* Text and icons on brand-colored areas (buttons, header, chat bubbles). */
+  --color-on-brand: #fdf5f1;
 
   --color-whatsapp: #25d366;
   --color-whatsapp-hover: #1ebe5b;
 
   /* Feedback */
-  --color-danger: #f87171;
-  --color-success: #4ade80;
+  --color-danger: #b42318;
+  --color-success: #276749;
 }
 
 html,

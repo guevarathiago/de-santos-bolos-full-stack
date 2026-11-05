@@ -136,7 +136,7 @@ const AdminDocuments = () => {
           type="button"
           onClick={() => fileInputRef.current?.click()}
           disabled={isUploading}
-          className="flex shrink-0 cursor-pointer items-center justify-center gap-2 rounded-md bg-brand px-4 py-2.5 text-sm font-semibold text-text-strong transition-colors hover:bg-brand-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-accent disabled:cursor-not-allowed disabled:opacity-60"
+          className="flex shrink-0 cursor-pointer items-center justify-center gap-2 rounded-md bg-brand px-4 py-2.5 text-sm font-semibold text-on-brand transition-colors hover:bg-brand-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-accent disabled:cursor-not-allowed disabled:opacity-60"
         >
           <ArrowUpTrayIcon className="h-5 w-5" aria-hidden="true" />
           {isUploading ? 'Enviando...' : 'Enviar documento'}

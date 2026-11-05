@@ -6,7 +6,9 @@ import type { AuthService } from '../auth/auth.service.js';
 import { signToken } from '../auth/token.js';
 import type { ConversationService } from '../conversations/conversation.service.js';
 import type { DocumentService } from '../documents/document.service.js';
+import type { ProductsService } from '../products/products.service.js';
 import type { RagService, RagStreamEvent } from '../rag/rag.service.js';
+import type { StorageService } from '../storage/storage.service.js';
 import { UserRole } from '../users/user.entity.js';
 import { CHAT_RATE_LIMIT } from './chat.routes.js';
 import { MAX_HISTORY_MESSAGES, MAX_MESSAGE_LENGTH } from './chat.schemas.js';
@@ -44,7 +46,14 @@ const makeApp = (overrides: Partial<RagService> = {}, conversationOverrides: Par
     } as ConversationService;
 
     return {
-        app: createApp({ authService: {} as AuthService, documentService: {} as DocumentService, ragService, conversationService }),
+        app: createApp({
+            authService: {} as AuthService,
+            documentService: {} as DocumentService,
+            ragService,
+            conversationService,
+            productsService: {} as ProductsService,
+            storageService: {} as StorageService,
+        }),
         ragService,
         conversationService,
     };

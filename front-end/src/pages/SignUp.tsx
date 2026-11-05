@@ -140,7 +140,7 @@ const SignUp = () => {
         <button
           type="submit"
           disabled={isLoading}
-          className="mt-2 w-full cursor-pointer rounded-md bg-brand py-2.5 text-sm font-semibold text-text-strong transition-colors hover:bg-brand-hover disabled:cursor-not-allowed disabled:opacity-60"
+          className="mt-2 w-full cursor-pointer rounded-md bg-brand py-2.5 text-sm font-semibold text-on-brand transition-colors hover:bg-brand-hover disabled:cursor-not-allowed disabled:opacity-60"
         >
           {isLoading ? 'Criando conta...' : 'Criar conta'}
         </button>

@@ -1,6 +1,8 @@
 import request from 'supertest';
 import { describe, expect, it, vi } from 'vitest';
 import { createApp } from '../../app.js';
+import type { ProductsService } from '../products/products.service.js';
+import type { StorageService } from '../storage/storage.service.js';
 import type { ConversationService } from '../conversations/conversation.service.js';
 import { HttpError } from '../../errors/http-error.js';
 import type { AuthService } from '../auth/auth.service.js';
@@ -31,6 +33,8 @@ const makeApp = (documentService = makeDocumentService()) =>
         documentService,
         ragService: {} as RagService,
         conversationService: {} as ConversationService,
+        productsService: {} as ProductsService,
+        storageService: {} as StorageService,
     });
 
 const as = (user: typeof admin) => [`token=${signToken(user)}`];

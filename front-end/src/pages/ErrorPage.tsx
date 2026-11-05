@@ -5,7 +5,7 @@ const ErrorPage = () => {
       <p className="text-sm text-text-muted">Ocorreu um erro inesperado. Tente novamente.</p>
       <a
         href="/"
-        className="rounded-md bg-brand px-4 py-2 text-sm font-semibold text-text-strong transition-colors hover:bg-brand-hover"
+        className="rounded-md bg-brand px-4 py-2 text-sm font-semibold text-on-brand transition-colors hover:bg-brand-hover"
       >
         Voltar para o início
       </a>

@@ -3,6 +3,7 @@ import RootLayout from './layouts/RootLayout';
 import GuestRoute from './components/GuestRoute/GuestRoute';
 import AdminRoute from './components/AdminRoute/AdminRoute';
 import AdminDocuments from './pages/AdminDocuments';
+import AdminProducts from './pages/AdminProducts';
 import Home from './pages/Home';
 import Login from './pages/Login';
 import SignUp from './pages/SignUp';
@@ -52,6 +53,10 @@ export const router = createBrowserRouter([
           {
             path: '/admin/documentos',
             element: <AdminDocuments />,
+          },
+          {
+            path: '/admin/produtos',
+            element: <AdminProducts />,
           },
         ],
       },

@@ -4,6 +4,8 @@ import jwt from 'jsonwebtoken';
 import request from 'supertest';
 import { describe, expect, it, vi } from 'vitest';
 import { createApp } from './app.js';
+import type { ProductsService } from './modules/products/products.service.js';
+import type { StorageService } from './modules/storage/storage.service.js';
 import type { ConversationService } from './modules/conversations/conversation.service.js';
 import { HttpError } from './errors/http-error.js';
 import { authenticate } from './middlewares/authenticate.js';
@@ -29,6 +31,8 @@ const makeApp = (authService = makeAuthService()) =>
         documentService: {} as DocumentService,
         ragService: {} as RagService,
         conversationService: {} as ConversationService,
+        productsService: {} as ProductsService,
+        storageService: {} as StorageService,
     });
 
 const tokenCookie = (token: string) => [`token=${token}`];

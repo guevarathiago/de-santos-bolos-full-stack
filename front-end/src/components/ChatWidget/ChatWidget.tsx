@@ -193,7 +193,7 @@ const ChatPanel = ({ isLoggedIn }: { isLoggedIn: boolean }) => {
         onClick={open}
         aria-label="Abrir assistente"
         title="Assistente"
-        className="fixed right-4 bottom-20 z-40 flex h-14 w-14 cursor-pointer items-center justify-center rounded-full bg-brand text-text-strong shadow-lg shadow-black/40 transition-transform hover:scale-110 hover:bg-brand-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-accent focus-visible:ring-offset-2 focus-visible:ring-offset-surface active:scale-95 sm:right-6 sm:bottom-24"
+        className="fixed right-4 bottom-20 z-40 flex h-14 w-14 cursor-pointer items-center justify-center rounded-full bg-brand text-on-brand shadow-lg shadow-black/15 transition-transform hover:scale-110 hover:bg-brand-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-accent focus-visible:ring-offset-2 focus-visible:ring-offset-surface active:scale-95 sm:right-6 sm:bottom-24"
       >
         <ChatBubbleLeftRightIcon className="h-7 w-7" aria-hidden="true" />
       </button>
@@ -204,7 +204,7 @@ const ChatPanel = ({ isLoggedIn }: { isLoggedIn: boolean }) => {
     <section
       role="dialog"
       aria-label="Assistente De Santos Bolos"
-      className="fixed inset-0 z-60 flex flex-col bg-surface sm:inset-auto sm:right-6 sm:bottom-6 sm:h-144 sm:max-h-[calc(100dvh-6rem)] sm:w-96 sm:overflow-hidden sm:rounded-lg sm:border sm:border-surface-border sm:shadow-2xl sm:shadow-black/60"
+      className="fixed inset-0 z-60 flex flex-col bg-surface sm:inset-auto sm:right-6 sm:bottom-6 sm:h-144 sm:max-h-[calc(100dvh-6rem)] sm:w-96 sm:overflow-hidden sm:rounded-lg sm:border sm:border-surface-border sm:shadow-2xl sm:shadow-black/15"
     >
       <header className="flex items-center gap-3 border-b border-surface-border bg-surface-elevated px-4 py-3">
         <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-brand/20">
@@ -262,7 +262,7 @@ const ChatPanel = ({ isLoggedIn }: { isLoggedIn: boolean }) => {
             {messages.map((message) =>
               message.role === 'user' ? (
                 <li key={message.id} className="flex justify-end">
-                  <p className="max-w-[85%] whitespace-pre-line rounded-2xl rounded-br-sm bg-brand px-3.5 py-2 text-sm text-text-strong">
+                  <p className="max-w-[85%] whitespace-pre-line rounded-2xl rounded-br-sm bg-brand px-3.5 py-2 text-sm text-on-brand">
                     {message.text}
                   </p>
                 </li>
@@ -324,7 +324,7 @@ const ChatPanel = ({ isLoggedIn }: { isLoggedIn: boolean }) => {
             disabled={isWaiting || isLoadingHistory || !draft.trim()}
             aria-label="Enviar"
             title="Enviar"
-            className="flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-md bg-brand text-text-strong transition-colors hover:bg-brand-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-accent disabled:cursor-not-allowed disabled:opacity-50"
+            className="flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-md bg-brand text-on-brand transition-colors hover:bg-brand-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-accent disabled:cursor-not-allowed disabled:opacity-50"
           >
             <PaperAirplaneIcon className="h-5 w-5" aria-hidden="true" />
           </button>

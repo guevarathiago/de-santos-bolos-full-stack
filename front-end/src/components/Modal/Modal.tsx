@@ -7,9 +7,12 @@ type ModalProps = {
   onClose: () => void;
   title: string;
   children: ReactNode;
+  size?: 'md' | 'lg';
 };
 
-const Modal = ({ isOpen, onClose, title, children }: ModalProps) => {
+const sizeClasses = { md: 'max-w-md', lg: 'max-w-2xl' };
+
+const Modal = ({ isOpen, onClose, title, children, size = 'md' }: ModalProps) => {
   const dialogRef = useRef<HTMLDialogElement>(null);
   const titleId = useId();
 
@@ -37,7 +40,7 @@ const Modal = ({ isOpen, onClose, title, children }: ModalProps) => {
         }
       }}
       aria-labelledby={titleId}
-      className="m-auto w-[calc(100%-2rem)] max-w-md rounded-lg border border-surface-border bg-surface-elevated p-0 text-text backdrop:bg-black/60 backdrop:backdrop-blur-sm"
+      className={`m-auto w-[calc(100%-2rem)] ${sizeClasses[size]} rounded-lg border border-surface-border bg-surface-elevated p-0 text-text backdrop:bg-black/60 backdrop:backdrop-blur-sm max-h-[calc(100dvh-2rem)] overflow-y-auto`}
     >
       <div className="flex items-center justify-between border-b border-surface-border px-5 py-4">
         <h2 id={titleId} className="text-lg font-semibold text-text-strong">
